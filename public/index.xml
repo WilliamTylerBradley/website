@@ -6,10 +6,19 @@
     <description>Recent content on William Tyler Bradley</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 16 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 17 Apr 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Website Design: Part 2</title>
+      <link>/2020/04/17/website-design-part-2/</link>
+      <pubDate>Fri, 17 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/04/17/website-design-part-2/</guid>
+      <description>This post continues the work from the previous one.  This code takes the saved data and creates the images.</description>
+    </item>
     
     <item>
       <title>Website Design: Part 1</title>

@@ -16,7 +16,7 @@ knitr::opts_chunk$set(eval = FALSE)
 knitr::opts_knit$set(bookdown.internal.label = FALSE)
 knitr::opts_chunk$set(out.extra = 'style="display:block; margin:auto;"')  # center
 ```
-This blog post and the next one cover the code for making the site images.  The first post pulls the data, and the second one creates the images.  The setup first pulls the contents from the [Data Science](https://en.wikipedia.org/wiki/Data_science) page of Wikipedia to get the letter frequencies. The code then pulls the overall letter frequencies for the English language.  Finally, it saves them together to graph later.
+This blog post and the next one cover the code for making the site images.  The first post pulls the data, and the second one creates the images.  The setup first pulls the contents from the [Data Science](https://en.wikipedia.org/wiki/Data_science){target="_blank"} page of Wikipedia to get the letter frequencies. The code then pulls the overall letter frequencies for the English language.  Finally, it saves them together to graph later.
 
 This first section just lists out the R libraries.  The `here` and `ggplot2` libraries are standard for most of my projects.  The main additional library is `rvest`, which pulls the content from web pages.
 
