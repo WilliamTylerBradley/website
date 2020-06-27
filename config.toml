@@ -163,6 +163,9 @@ canonifyurls = true
   # they have to be referred from static root. Example
    [[params.customCSS]]
      href = "css/calathea_hexo.css"
+	 
+   [[params.customCSS]]
+     href = "css/link_color.css"	 
 
   # Custom JS. Put here your custom JS files. They are loaded after the theme JS;
   # they have to be referred from static root. Example
