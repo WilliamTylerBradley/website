@@ -6,10 +6,19 @@
     <description>Recent content in Posts on William Tyler Bradley</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 25 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 16 Apr 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Website Design: Part 1</title>
+      <link>/2020/04/16/website-design-part-1/</link>
+      <pubDate>Thu, 16 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/04/16/website-design-part-1/</guid>
+      <description>This blog post and the next one cover the code for making the site images.  The first post pulls the data, and the second one creates the images.  The setup first pulls the contents from the &lt;a href=&#34;https://en.wikipedia.org/wiki/Data_science&#34;&gt;Data Science&lt;/a&gt; page of Wikipedia to get the letter frequencies. The code then pulls the overall letter frequencies for the English language.  Finally, it saves them together to graph later.</description>
+    </item>
     
     <item>
       <title>rstudio::conf 2019</title>
