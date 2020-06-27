@@ -180,4 +180,4 @@ dev.off()
 knitr::include_graphics('/post/2020-04-17-website-design-part-2_files/icon.png', error = FALSE)
 ```
 
-The background is transparent so that it doesn’t appear out of place when moved.  The bars come from the same data as the background but only using the letters of my name.  The  config.toml setting is `favicon = "images/website/icon.png"`.  The source code file resides here.
+The background is transparent so that it doesn’t appear out of place when moved.  The bars come from the same data as the background but only using the letters of my name.  The  config.toml setting is `favicon = "images/website/icon.png"`.  The source code file resides [here](https://github.com/WilliamTylerBradley/site_design/blob/master/make_images.R){target="_blank"}.
