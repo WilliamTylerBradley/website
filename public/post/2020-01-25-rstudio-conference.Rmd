@@ -1,0 +1,50 @@
+---
+title: rstudio::conf 2019
+author: WTB
+date: '2020-01-25'
+slug: rstudio-conference
+categories: []
+tags: []
+keywords:
+  - conference
+summary: "What a great conference!"
+---
+
+The 2019 RStudio conference, rstudio::conf, was definitely one of the best conferences I’ve ever attended.  The other attendees are the nicest and the talks were useful and well put together.  However, I don’t feel like I got the most out of it.  This blog post intends to be some basics facts for setting expectations and tricks for getting more out of the conference.  This is mainly for people going to another RStudio conference (here’s looking at you, future me), but maybe not people that really have it together.  
+
+**Dress code:**
+
+I don’t really care about dress code, but I’ve definitely been underdressed other conferences and would prefer to not do that again.  rstudio::conf seemed to be on the very casual side of business casual.  I mostly only paid attention to how other men dressed, so that might not hold true for different groups.  Most of the guys had chinos/nice jeans and a button-down, but there were guys with nice t-shirts and jeans.  That said, I was wearing chinos/nice jeans and a button-down, so maybe I just noticed those outfits more.  I tend to be way more worried about me standing out than if some else sticks out because of their clothing.  I think most people at conferences do that.  When wearing jeans and a button-down shirt, I never know if I’m supposed to tuck in the shirt.  I looked to see what other men were doing, and there was not a consensus at all.  So, tucked or untucked shirts with jeans are fine.  A suit would be good too since I saw a few of those.  
+
+When traveling with business clothes, I pack carefully and hang them up in the bathroom when I take a hot shower to steam them a little bit.  So far, that’s always worked well for me, but I know people that have a travel steamer and swear by it.  There’s almost always an iron in the room if needed.  
+
+**Talks: **
+
+I planned out all the talks I wanted to see before I got there, but I still ended up switching some of them.  The conference had different tracks, but none of them fit my job or interests all the way.  I ended up moving between rooms quite often.  As long as I stayed in the back and quickly left when talks ended, switching rooms wasn’t hard to do.
+
+If you’re giving a talk, I would highly recommend publicizing it.  I mainly when to Kara Woo’s talk because a lot of people mentioned it on Twitter.  I went to Tyler Morgan-Wall’s talk because he sat down at my lunch table and invited everyone.  Basically, peer pressure will get me (and probably other people) to go to a talk easily.
+
+The conference had throwable mics for the audience to ask questions.  They looked like big gray blocks, but I didn’t get close enough for a good view.  Coming up with a good question after a short talk, catching an object that’s thrown to me, and working new technology without any help in front of at least 500 people sounds like a literal nightmare situation to me.  But everything worked out fine!  First of all, most of the talks didn’t have time for a lot of questions, which is the best possibility.  I find most people (but not all) that ask questions at talks are trying to impress other people rather than get information.  I might be bitter because I don’t come up with good questions, who knows.  When there were questions, I didn’t see anyone get bonked in the head with the mic or not fail using it.  I’m not saying it didn’t happen, just that I didn’t see it.  Anyways, if you have a good question, ask it.  The mic throwing wasn’t a train wreck like I thought it would be.
+
+If you are going to miss something at this conference (like to recharge your literal or figurative batteries), I would recommend skipping talks.  All the talks are online for the conference, and I assume they’ll be up for future ones.  Because there are too many talks you’ll want to see, you’ll end up watching a lot online anyways.  You might as well add in one more if you need a nap.
+
+**People: **
+
+A few days before the conference, I reached out on an alumni list server to see if anyone else was going.  I got a couple of responses back.  I ate dinner with a colleague I graduated with and one of her coworkers.  I got lunch and hung out with two people I didn’t know but graduated years after I did.  I also saw someone else from grad school at the conference.  I reached out on LinkedIn, they confirmed they were at the conference, but then did not respond to meeting up sometime.  So it might not work, but reaching out has been worth it in more cases than not for me.
+
+At the conference, I attended as many of the networking events that I could.  I did miss the Data for Good birds of a feather because I walked into the opposite side of the dining room and didn’t see the group.  I suggest getting places a little early to scope out locations, like a responsible adult.
+
+I used the rstudio::conf app to look up the people I met.  I mainly did this by writing their names in a note on my phone, then using the app to get more information, then connecting on LinkedIn or following on Twitter.  Name tags were super helpful for this because I pretty much instantly forget names during introductions.  The main issue with this was when name tags got flipped around backward, which happened a decent amount.
+
+I do an ‘ok’ job of talking with other people at networking events.  I can always start a conversation and keep one going, but I have no idea how to disengage and move on to other people.  So if we start talking at a networking event, we’re just going to be BFF’s because I don’t know how to stop.  I’m always super impressed with people that can end a conversation nicely.  I have found a follow-up after meeting tends to be successful, even if there is a weird disengagement.  Networking only works if you continue communication after the conference.
+
+For the conference demographics, there were more women and minorities than other analytics conferences I’ve attended.  The population was also noticeably younger than other conferences.  There were a lot more grad students and fewer managers there too.
+
+**Other: ** 
+
+On the flight to Austin, I finished reading Weapons of Math Destruction by Cathy O’Neil.  I meant to post somewhere, probably Twitter, that I had finished the book, and if someone at the conference wanted it, they could have it.  I never got around to that, but I really wish I had.  The conference will go by incredibly fast.  You’re going to check-in to the hotel, blink, and then check-out.  If there’s something you want to do, go ahead and do it or it won’t happen.
+
+The conference had professional headshots.  I liked that a lot because it can be annoying to find the time or money to get that done.  I didn’t need a new one, but it was free.  So why not?
+
+The conference had a lot of hex stickers for different packages.  The stickers showed up around different tables at various times.  I got a decent amount and brought them back to share at Meetups.  While you should leave some for the other conference attendees, you do look cool when you’re back in your hometown with stickers for people that couldn’t go to the conference.  You also look cool (cool for data science, maybe not for real life) when you wear your rstudio::conf shirt around and people recognize it.  
+
