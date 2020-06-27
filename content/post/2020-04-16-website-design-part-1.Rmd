@@ -105,7 +105,7 @@ ggsave(filename = here::here("images", "overall_letter.png"))
 knitr::include_graphics('/post/2020-04-16-website-design-part-1_files/overall_letter.png', error = FALSE)
 ```
 
-The last two sections combine the data and set values for the letters’ speech sounds.  Finally, the data is saved for future use.
+The last two sections combine the data and save it for future use.
 
 ```{r combine_data}
 #-------------
