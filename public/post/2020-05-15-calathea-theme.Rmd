@@ -39,7 +39,7 @@ I tested out the colors by making an icon image.  The icon was mostly for fun bu
 
 </br>
 
-:::: {style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; grid-column-gap: 10px; "}
+:::: {style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); align-items: center; grid-column-gap: 10px; "}
 ::: {}
 
 ```{r icon, eval = TRUE, echo = FALSE, fig.cap="base background", out.extra='height = 175px; style="display:block; margin:auto;"'}
@@ -76,14 +76,15 @@ rename(Feature = feature,
 kable(format = "html",
       digits = 2) %>%
   kable_styling(position = "center",
-                full_width = FALSE)
+                full_width = FALSE) %>%
+  scroll_box(width = "100%")
 ```
 
 I originally shot for AAA, but I couldn't get that working while having the foreground colors stand apart from each other.  The code to determine the contrast values is [here](https://github.com/WilliamTylerBradley/Calathea/blob/main/r_code/contrasts.R){target="_blank"}.
 
 I also attempted to check color-blindness compatibilities using this [simulator](https://www.color-blindness.com/coblis-color-blindness-simulator/){target="_blank"} from color-blindness.com.  These colors look ok but might need improvement for monochrome.
 
-:::: {style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; grid-column-gap: 10px; "}
+:::: {style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); align-items: center; grid-column-gap: 10px; "}
 ::: {}
 
 ```{r color_test_raw, eval = TRUE, echo = FALSE, fig.cap="base colors"}

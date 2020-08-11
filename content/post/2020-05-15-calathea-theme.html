@@ -31,7 +31,7 @@ My Calathea Medallion
 </div>
 <p>I tested out the colors by making an icon image. The icon was mostly for fun but did produce a suitable code file to test out the colors in RStudio. There are three different versions, one for each background. The code to create them can be found <a href="https://github.com/WilliamTylerBradley/Calathea/blob/main/r_code/icon.R" target="_blank">here</a>.</p>
 <p></br></p>
-<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; grid-column-gap: 10px; ">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); align-items: center; grid-column-gap: 10px; ">
 <div>
 <div class="figure">
 <img src="/post/2020-05-15-calathea-theme_files/icon.png" alt="base background" height = 175px; style="display:block; margin:auto;" />
@@ -58,6 +58,7 @@ R Markdown chunk
 </div>
 </div>
 <p>The foreground/background contrasts were determined to see if they passed WCAG AA standards for normal text. All the foreground colors have at least a 4.5:1 contrast with all the background colors.</p>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -183,9 +184,10 @@ Yellow
 </tr>
 </tbody>
 </table>
+</div>
 <p>I originally shot for AAA, but I couldn’t get that working while having the foreground colors stand apart from each other. The code to determine the contrast values is <a href="https://github.com/WilliamTylerBradley/Calathea/blob/main/r_code/contrasts.R" target="_blank">here</a>.</p>
 <p>I also attempted to check color-blindness compatibilities using this <a href="https://www.color-blindness.com/coblis-color-blindness-simulator/" target="_blank">simulator</a> from color-blindness.com. These colors look ok but might need improvement for monochrome.</p>
-<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; grid-column-gap: 10px; ">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); align-items: center; grid-column-gap: 10px; ">
 <div>
 <div class="figure">
 <img src="/post/2020-05-15-calathea-theme_files/color_test_raw.png" alt="base colors" style="display:block; margin:auto;" />
