@@ -1,0 +1,340 @@
+---
+title: 'ADP First Pass: Arrests By Offense Type'
+author: Tyler
+date: '2020-08-14'
+slug: adp-first-pass-arrests-by-offense-type.en-us
+categories: []
+tags: []
+keywords:
+    - ADP
+summary: "This next post investigates the arrests' offense types."
+thumbnailImage: /post/2020-08-14-adp-first-pass-arrests-by-offense-type.en-us_files/offense_codes_thumbnail.png
+thumbnailImagePosition: "right"
+---
+
+
+
+<p>This next post investigates the arrests’ offense types. Several other data sets get pulled in to add some context and treemaps are created to show the hierarchies.</p>
+<pre class="r"><code>##---------
+# Libraries
+##---------
+library(tidyverse)
+library(here)
+library(ggplot2)
+library(lubridate)
+library(rvest)
+library(treemap)
+library(colorspace)
+
+##------------
+# Read in data
+##------------
+data &lt;- read_csv(file = &quot;https://raw.githubusercontent.com/WilliamTylerBradley/apd_data/master/APD_Arrests.csv&quot;)
+head(data)</code></pre>
+<pre><code>## # A tibble: 6 x 10
+##   OBJECTID date_arrested time_arrested address offense_type subject_race
+##      &lt;dbl&gt; &lt;date&gt;        &lt;chr&gt;         &lt;chr&gt;   &lt;chr&gt;        &lt;chr&gt;       
+## 1 20473383 2012-01-01    0000          100-BL~ SECOND DEGR~ B           
+## 2 20473384 2012-01-01    0145          100-BL~ INTOXICATED~ W           
+## 3 20473385 2012-01-01    0015          100-BL~ FEL HIT/RUN~ W           
+## 4 20473386 2012-01-01    0015          100-BL~ DRIVE AFTER~ W           
+## 5 20473387 2012-01-01    0134          100-BL~ ASSAULT ON ~ B           
+## 6 20473388 2012-01-01    0230          100-BL~ ASSAULT ON ~ W           
+## # ... with 4 more variables: subject_gender &lt;chr&gt;, agency &lt;chr&gt;,
+## #   armainid &lt;dbl&gt;, objectid_1 &lt;dbl&gt;</code></pre>
+<p>This is the same data as the previous post.</p>
+<p>The NC Courts have a list of offense codes and their classes as an Excel file <a href="https://www.nccourts.gov/documents/publications/nc-courts-offense-codes-and-classes" target="_blank">here</a>. This data is saved to GitHub <a href="https://github.com/WilliamTylerBradley/apd_data/blob/master/offense_codes_and_classes_1.xls" target="blank">here</a>, which is read in with the following code. The large comment section shows the notes attached to the columns on the file.</p>
+<pre class="r"><code>##-----------------
+# Get offense types
+##-----------------
+
+# https://www.nccourts.gov/documents/publications
+## /nc-courts-offense-codes-and-classes
+github_link &lt;- &quot;https://raw.githubusercontent.com/WilliamTylerBradley/apd_data/master/offense_codes_and_classes_1.xls&quot;
+library(httr)</code></pre>
+<pre><code>## Warning: package &#39;httr&#39; was built under R version 4.0.3</code></pre>
+<pre class="r"><code>temp_file &lt;- tempfile(fileext = &quot;.xls&quot;)
+req &lt;- GET(github_link, 
+          # authenticate using GITHUB_PAT
+           authenticate(Sys.getenv(&quot;GITHUB_PAT&quot;), &quot;&quot;),
+          # write result to disk
+           write_disk(path = temp_file))
+offense_codes &lt;- readxl::read_xls(temp_file,
+                                  sheet = &quot;AOC ACIS Codes&quot;)
+unlink(temp_file)
+
+####----
+# Notes:
+# D : &quot;*&quot; means not in use and &quot;I&quot; means replaced by an Infraction
+# CODE : Offense Code will be repeated when changes in Class occure
+# T : T=Traffic, and I=Infraction
+#   : blank=Clerk has to entered F, M, T, or I
+# Offense Description :
+# NC General Statute :
+# Offense State Date : Date Offense Code Applies
+# Offense End Date : Date Offense Code Applies
+# CL : Structured Sentencing Class
+#    : ?? Means Mixed Classes
+# Class Start Date : Date Class Code Applies
+# Class End Date : Date Class Code Applies
+# DWI and IC Report :
+# Max Date : Maximum of Start and End Offense Code Dates and Class dates
+####----
+head(offense_codes)</code></pre>
+<pre><code>## # A tibble: 6 x 12
+##   D     CODE  T     `Offense Descri~ `NC General Sta~ `Offense Start ~
+##   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;            &lt;chr&gt;            &lt;chr&gt;           
+## 1 &lt;NA&gt;  0910  F     MURDER OF AN UN~ 14-23.2(A)       20111201        
+## 2 &lt;NA&gt;  0915  F     VOL MANSLAUGHTE~ 14-23.3(A)       20111201        
+## 3 &lt;NA&gt;  0916  F     INV MANSLAUGHTE~ 14-23.4(A)       20111201        
+## 4 &lt;NA&gt;  0920  F     VOLUNTARY MANSL~ 14-18            00000000        
+## 5 &lt;NA&gt;  0920  F     VOLUNTARY MANSL~ 14-18            00000000        
+## 6 &lt;NA&gt;  0922  F     INVOLUNTARY MAN~ 14-18            00000000        
+## # ... with 6 more variables: `Offense End Date` &lt;chr&gt;, CL &lt;chr&gt;, `Class Start
+## #   Date` &lt;chr&gt;, `Class End Date` &lt;chr&gt;, `DWI and IC Report` &lt;chr&gt;, `Max
+## #   Date` &lt;chr&gt;</code></pre>
+<p>Cleaning up the data shows some common date issues.</p>
+<pre class="r"><code>names(offense_codes) &lt;- c(&quot;D&quot;, &quot;code&quot;, &quot;T&quot;, &quot;description&quot;, &quot;statute&quot;,
+                          &quot;offense_start_date&quot;, &quot;offense_end_date&quot;,
+                          &quot;class&quot;, &quot;class_start_date&quot;, &quot;class_end_date&quot;,
+                          &quot;dwi_ic_report&quot;, &quot;max_date&quot;)
+
+# Clean up data ----
+offense_codes &lt;- offense_codes %&gt;%
+  mutate(offense_start_date = as.Date(offense_start_date, format = &quot;%Y%m%d&quot;),
+         offense_end_date = as.Date(offense_end_date, format = &quot;%Y%m%d&quot;),
+         class_start_date = as.Date(class_start_date, format = &quot;%Y%m%d&quot;),
+         class_end_date = as.Date(class_end_date, format = &quot;%Y%m%d&quot;)) %&gt;%
+  mutate(offense_start_date = if_else(is.na(offense_start_date),
+                                      as.Date(&quot;1900-01-01&quot;),
+                                      offense_start_date),
+         offense_end_date = if_else(is.na(offense_end_date),
+                                    as.Date(&quot;9999-01-01&quot;),
+                                    offense_end_date),
+         class_start_date = if_else(is.na(class_start_date),
+                                    as.Date(&quot;1900-01-01&quot;),
+                                    class_start_date),
+         class_end_date = if_else(is.na(class_end_date),
+                                  as.Date(&quot;9999-01-01&quot;),
+                                  class_end_date))</code></pre>
+<p>Some offense types were missing. These were download and an updated type was added manually.</p>
+<pre class="r"><code>## Code to save missing types ----
+# distinct_offense_codes &lt;- offense_codes %&gt;%
+#   select(&quot;description&quot;) %&gt;%
+#   distinct() %&gt;%
+#   pull()
+#
+# distinct_offense_type &lt;- data %&gt;%
+#   select(&quot;offense_type&quot;) %&gt;%
+#   distinct() %&gt;%
+#   pull()
+#
+# missing_types &lt;- distinct_offense_type[!(distinct_offense_type %in%
+#                                           distinct_offense_codes)]
+# write_csv(data.frame(offense_type = missing_types),
+#           path = here::here(&quot;missing_types.csv&quot;))
+
+## Do some individual cleaning ----
+
+## Cleaned up Offense Codes ----
+missing_types &lt;- read_csv(here::here(&quot;missing_types.csv&quot;))</code></pre>
+<p>The missing types in the data are updated. Then the offense codes are joined. There are some arrests with multiple codes. These can be taken care of by either checking dates or just picking the top record.</p>
+<pre class="r"><code>##--------------------------
+# Join offense types to data
+##--------------------------
+data &lt;- data %&gt;%
+  left_join(missing_types, by = c(&quot;offense_type&quot; = &quot;offense_type&quot;)) %&gt;%
+  mutate(offense_type = ifelse(!is.na(Update), Update, offense_type)) %&gt;%
+  select(-Update, -Cleaned)
+
+# Clean up dates ----
+data_offense_codes &lt;- data %&gt;%
+  left_join(offense_codes, by = c(&quot;offense_type&quot; = &quot;description&quot;)) %&gt;%
+  mutate(offense_start_date = if_else(is.na(offense_start_date),
+                                      as.Date(&quot;1900-01-01&quot;),
+                                      offense_start_date),
+         offense_end_date = if_else(is.na(offense_end_date),
+                                    as.Date(&quot;9999-01-01&quot;),
+                                    offense_end_date),
+         class_start_date = if_else(is.na(class_start_date),
+                                    as.Date(&quot;1900-01-01&quot;),
+                                    class_start_date),
+         class_end_date = if_else(is.na(class_end_date),
+                                  as.Date(&quot;9999-01-01&quot;),
+                                  class_end_date))
+
+# Filter by dates ----
+data_dates_in &lt;- data_offense_codes %&gt;%
+  filter(date_arrested &gt;= offense_start_date &amp;
+           date_arrested &lt;= offense_end_date &amp;
+           date_arrested &gt;= class_start_date &amp;
+           date_arrested &lt;= class_end_date)
+
+data_missing &lt;- data_offense_codes %&gt;%
+  filter(!(data_offense_codes$OBJECTID %in% data_dates_in$OBJECTID))
+
+data_offense_codes &lt;- rbind(data_dates_in, data_missing)
+
+## De-duplicate
+duplicates &lt;- data_offense_codes %&gt;%
+  group_by(OBJECTID) %&gt;%
+  mutate(count = n()) %&gt;%
+  filter(count &gt; 1) %&gt;%
+  select(-count)
+
+# Take highest code?
+duplicates &lt;- duplicates %&gt;%
+  group_by(OBJECTID) %&gt;%
+  slice_max(1, code, class_start_date)
+
+data_offense_codes &lt;- data_offense_codes %&gt;%
+  filter(!(data_offense_codes$OBJECTID %in% duplicates$OBJECTID))
+
+data_offense_codes &lt;- rbind(data_offense_codes, duplicates)
+# Now original data and offense match up in number of arrests</code></pre>
+<p>In addition to offense codes, the statute chapters can be added. These are found by scrapping this <a href="https://www.ncleg.gov/Laws/GeneralStatutesTOC" target="blank">site</a>.</p>
+<pre class="r"><code>##--------------------
+# Get statute chapters
+##--------------------
+statutes_web_page &lt;- read_html(&quot;https://www.ncleg.gov/Laws/GeneralStatutesTOC&quot;)
+statutes_web_page &lt;- statutes_web_page %&gt;%
+  html_nodes(&quot;a&quot;) %&gt;%
+  html_text()
+
+statutes_web_page &lt;- as.data.frame(statutes_web_page)
+
+statutes_web_page &lt;- statutes_web_page %&gt;%
+  mutate(is_title = if_else(substr(statutes_web_page, 1, 7) == &quot;Chapter&quot;,
+                            1, 0)) %&gt;%
+  mutate(is_chapter = lag(is_title),
+         title = lag(statutes_web_page)) %&gt;%
+  filter(is_chapter == 1) %&gt;%
+  select(title, statutes_web_page) %&gt;%
+  rename(chapter = statutes_web_page) %&gt;%
+  mutate(chapter_number = sub(&quot;.*\\s&quot;, &quot;&quot;, title))
+
+# Join statute chapters to data ----
+data_offense_codes &lt;- data_offense_codes %&gt;%
+  mutate(statute_chapter = sub(&quot;(^[^-]+)-.*&quot;, &quot;\\1&quot;, statute))
+
+data_offense_codes &lt;- data_offense_codes %&gt;%
+  left_join(statutes_web_page, by = c(&quot;statute_chapter&quot; = &quot;chapter_number&quot;))
+
+data_offense_codes &lt;- data_offense_codes %&gt;%
+  select(OBJECTID,
+         offense_type,
+         code,
+         statute,
+         class,
+         statute_chapter,
+         chapter) %&gt;%
+  mutate(statute = if_else(is.na(statute), offense_type, statute),
+         chapter = if_else(is.na(chapter), statute, chapter))</code></pre>
+<p>Finally, the data is ready for visualizing. To prepare for the treemap, groups that make up a very small proportion of each level are combined together.</p>
+<pre class="r"><code>##----------
+# Get counts
+##----------
+data_summary &lt;- data_offense_codes %&gt;%
+  group_by(chapter) %&gt;%
+  summarise(count = n())
+
+# Combine small statute counts into &quot;OTHER&quot;
+data_summary &lt;- data_offense_codes %&gt;%
+  select(chapter, statute) %&gt;%
+  mutate(total_count = n()) %&gt;%
+  group_by(chapter) %&gt;%
+  mutate(chapter_count = n()) %&gt;%
+  mutate(chapter_prop = chapter_count / total_count) %&gt;%
+  mutate(chapter = if_else(chapter_prop &lt; .01, &quot;OTHER&quot;, chapter),
+         statute = if_else(chapter_prop &lt; .01, &quot;OTHER&quot;, statute)) %&gt;%
+  group_by(chapter) %&gt;%
+  mutate(chapter_count = n()) %&gt;%
+  group_by(chapter, chapter_count, statute) %&gt;%
+  summarise(statute_count = n()) %&gt;%
+  mutate(statute_chapter_prop = statute_count / chapter_count) %&gt;%
+  mutate(statute = if_else(statute_chapter_prop &lt; .0075, &quot;OTHER&quot;, statute)) %&gt;%
+  group_by(chapter, chapter_count, statute) %&gt;%
+  summarise(count = sum(statute_count))
+
+data_summary &lt;- data_summary %&gt;%
+  mutate(chapter = paste0(chapter, &quot; (&quot;,
+                          format(chapter_count,
+                                 big.mark = &quot;,&quot;,
+                                 trim = TRUE), &quot;)&quot;))
+
+count_chapters &lt;- length(unique(data_summary$chapter))</code></pre>
+<pre class="r"><code>##------
+# Graphs
+##------
+png(filename = here::here(&quot;offense_codes.png&quot;),
+    width = 800,
+    height = 800)
+treemap(data_summary,
+        index = c(&quot;chapter&quot;, &quot;statute&quot;),
+        vSize = &quot;count&quot;,
+        type = &quot;index&quot;,
+        fontcolor.labels = c(&quot;white&quot;, &quot;black&quot;),
+        fontface.labels = c(2, 1),
+        bg.labels = c(&quot;transparent&quot;),
+        border.col = c(&quot;black&quot;, &quot;gray&quot;),
+        border.lwds = c(5, 2),
+        title = &quot;&quot;,
+        palette =
+          qualitative_hcl(count_chapters, palette = &quot;Dark3&quot;)[count_chapters:1]
+        )
+dev.off()</code></pre>
+<p><img src="/post/2020-08-14-adp-first-pass-arrests-by-offense-type.en-us_files/offense_codes.png" /></p>
+<p>Looking at the treemap, most of the arrests fall under Criminal Law, Motor Vehicles, and Medicine and Allied Occupations. The same set up can be applied to just one statute.</p>
+<pre class="r"><code>## Same analysis, but only Criminal Law
+data_summary &lt;- data_offense_codes %&gt;%
+  filter(chapter == &quot;Criminal Law&quot;)
+
+data_summary &lt;- data_summary %&gt;%
+  select(statute, offense_type) %&gt;%
+  mutate(total_count = n()) %&gt;%
+  group_by(statute) %&gt;%
+  mutate(statute_count = n()) %&gt;%
+  mutate(statute_prop = statute_count / total_count) %&gt;%
+  mutate(statute = if_else(statute_prop &lt; .01, &quot;OTHER&quot;, statute),
+         offense_type = if_else(statute_prop &lt; .01, &quot;OTHER&quot;, offense_type)) %&gt;%
+  group_by(statute) %&gt;%
+  mutate(statute_count = n()) %&gt;%
+  group_by(statute, statute_count, offense_type) %&gt;%
+  summarise(offense_type_count = n()) %&gt;%
+  mutate(offense_type_statute_prop = offense_type_count / statute_count) %&gt;%
+  mutate(offense_type = if_else(offense_type_statute_prop &lt; .0075,
+                                &quot;OTHER&quot;, offense_type)) %&gt;%
+  group_by(statute, statute_count, offense_type) %&gt;%
+  summarise(count = sum(offense_type_count))
+
+data_summary &lt;- data_summary %&gt;%
+  mutate(statute = paste0(statute, &quot; (&quot;,
+                          format(statute_count,
+                                 big.mark = &quot;,&quot;,
+                                 trim = TRUE), &quot;)&quot;))
+
+count_statutes &lt;- length(unique(data_summary$statute))
+
+png(filename = here::here(&quot;criminal_law_statutes.png&quot;),
+    width = 800,
+    height = 800)
+treemap(data_summary,
+        index = c(&quot;statute&quot;, &quot;offense_type&quot;),
+        vSize = &quot;count&quot;,
+        type = &quot;index&quot;,
+        fontcolor.labels = c(&quot;white&quot;, &quot;black&quot;),
+        fontface.labels = c(2, 1),
+        bg.labels = c(&quot;transparent&quot;),
+        border.col = c(&quot;black&quot;, &quot;gray&quot;),
+        border.lwds = c(5, 2),
+        title = &quot;Criminal Law&quot;,
+        palette =
+          qualitative_hcl(count_chapters, palette = &quot;Dark3&quot;),
+        align.labels = list(
+          c(&quot;center&quot;, &quot;center&quot;),
+          c(&quot;right&quot;, &quot;bottom&quot;)
+        )
+)
+dev.off()</code></pre>
+<p><img src="/post/2020-08-14-adp-first-pass-arrests-by-offense-type.en-us_files/criminal_law_statutes.png" /></p>
+<p>This time, the Other category takes up a lot of space. That shows there is a large variability within this statute. Second Degree Trespassing is the largest named group. It’s not until the third group that there are smaller breakouts.</p>
