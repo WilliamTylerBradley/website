@@ -1,0 +1,249 @@
+---
+title: 'ADP First Pass: Arrests Over Time'
+author: Tyler
+date: '2020-08-11'
+slug: adp-first-pass-arrests-over-time.en-us
+categories: []
+tags: []
+keywords:
+  - ADP
+summary: "The first pass of some of the Asheville Police Department (ADP) data gets covered in the next blog post series. The goal is to get an overview of the data by pulling in related data sets, organizing on a couple of themes, and graphing to see any trends."
+thumbnailImage: /post/2020-08-11-adp-first-pass-arrests-over-time.en-us_files/basic.png
+thumbnailImagePosition: "bottom"
+---
+
+The first pass of some of the Asheville Police Department (ADP) data gets covered in the next blog post series. The goal is to get an overview of the data by pulling in related data sets, organizing on a couple of themes, and graphing to see any trends. Because I don’t have any expertise on this dataset, there is no goal of causality or judgment. I’ll attempt to point out oddities but only from a data perspective. A later deep dive into the data might make some more substantial claims.
+
+This data can be found on the City of Ashville Open Data Portal [here](https://data-avl.opendata.arcgis.com/datasets/38bdfa06548a45bc9c89c7dddcfc5f31_0/data){target="_blank"}. The base code and data files can be found in this [repository](https://github.com/WilliamTylerBradley/apd_data){target="_blank"}. Outside data sources are given when they are used. Visualization outputs show up on the blog after the code snippets.
+
+This first post dives into the number of arrests over time.
+
+```{r setup, echo = FALSE}
+options(dplyr.summarise.inform=F)
+```
+
+```{r libraries, message = FALSE, warning = FALSE}
+##---------
+# Libraries
+##---------
+library(tidyverse)
+library(here)
+library(lubridate)
+library(zoo)
+library(ggplot2)
+library(scales)
+library(colorspace)
+library(ggrepel)
+```
+
+```{r data, message = FALSE, warning = FALSE}
+##-----------------------
+# Read in data and set up
+##-----------------------
+data <- read_csv(file = "https://raw.githubusercontent.com/WilliamTylerBradley/apd_data/master/APD_Arrests.csv")
+head(data)
+
+data_summary <- data %>%
+  group_by(date_arrested) %>%
+  summarise(total_arrests = n())
+head(data_summary)
+
+y_lim_max <- max(data_summary$total_arrests) + 10
+y_lim_max
+```
+
+Looking at the data, each row appears to be an arrest, and the columns are details about it. Summarizing the count based on the arrest date gets the primary information for this post. Saving the maximum number of arrests in one day and adding some leeway will be useful for graphing later.
+
+```{r basic}
+##------
+# Graphs
+##------
+
+# Basic over time ----
+ggplot(data = data_summary,
+       aes(x = date_arrested,
+           y = total_arrests)) +
+  geom_line() +
+  ylim(c(0, y_lim_max)) +
+  labs(x = "Date Arrested",
+       y = "Number of Arrests",
+       title = "Arrests By Date")
+```
+
+The basic graph of the arrest count by date is pretty rough but still useful. There are some days with a lot of arrests, but most of them hover around 30. No large trend is apparent. Overlaying the years might show some patterns better. 
+
+```{r color_year}
+# Color each year ----
+data_summary <- data_summary %>%
+  mutate(year_arrested = year(date_arrested),
+         month_arrested = month(date_arrested),
+         day_arrested = day(date_arrested),
+         graph_date = ymd(format(date_arrested, "2020-%m-%d"))) # 2020 leap year
+
+ggplot(data = data_summary,
+       aes(x = graph_date,
+           y = total_arrests,
+           col = as.character(year_arrested))) +
+  geom_line() +
+  ylim(c(0, y_lim_max)) +
+  scale_color_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_x_date(date_labels = "%B",
+               breaks = as.Date(c("2020-01-01",
+                                  "2020-04-01",
+                                  "2020-07-01",
+                                  "2020-10-01")),
+               date_minor_breaks = "1 month") +
+  labs(x = "Date Arrested",
+       y = "Number of Arrests",
+       title = "Arrests By Date",
+       col = "Year") +
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 1))
+```
+
+If there is large trend that should appear when overlaying the years, the noise from individual dates hides it. Smoothing out the data might show more.
+
+```{r averages}
+# 7 Day, 30 Day, and Month Average --
+data_summary <- data %>%
+  group_by(date_arrested) %>%
+  summarise(total_arrests = n()) %>%
+  arrange(date_arrested) %>%
+  mutate(total_arrest_week_avg =
+           rollmean(total_arrests, k = 7, fill = NA),
+         total_arrest_month_avg =
+           rollmean(total_arrests, k = 30, fill = NA)) %>%
+  mutate(year_arrested = year(date_arrested),
+         month_arrested = month(date_arrested),
+         day_arrested = day(date_arrested),
+         graph_date = ymd(format(date_arrested, "2020-%m-%d")),
+         month_year = ymd(format(date_arrested, "%y-%m-01"))) %>%
+  ungroup() %>%
+  group_by(year_arrested) %>%
+  mutate(total_arrest_cumulative = cumsum(total_arrests)) %>%
+  ungroup() %>%
+  group_by(month_year) %>%
+  mutate(month_average = mean(total_arrests))
+  
+ggplot(data = data_summary,
+       aes(x = graph_date,
+           y = total_arrest_week_avg,
+           col = as.character(year_arrested))) +
+  geom_line() +
+  ylim(c(0, y_lim_max)) +
+  scale_color_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_x_date(date_labels = "%B",
+               breaks = as.Date(c("2020-01-01",
+                                  "2020-04-01",
+                                  "2020-07-01",
+                                  "2020-10-01")),
+               date_minor_breaks = "1 month") +
+  labs(x = "Date Arrested",
+       y = "7 Day Average Arrests",
+       title = "7 Day Average By Date",
+       col = "Year") +
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 1))
+
+ggplot(data = data_summary,
+       aes(x = graph_date,
+           y = total_arrest_month_avg,
+           col = as.character(year_arrested))) +
+  geom_line() +
+  ylim(c(0, y_lim_max)) +
+  scale_color_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_x_date(date_labels = "%B",
+               breaks = as.Date(c("2020-01-01",
+                                  "2020-04-01",
+                                  "2020-07-01",
+                                  "2020-10-01")),
+               date_minor_breaks = "1 month") +
+  labs(x = "Date Arrested",
+       y = "30 Day Average Arrests",
+       title = "30 Day Average By Date",
+       col = "Year") +
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 1))
+
+ggplot(data = data_summary,
+       aes(x = graph_date,
+           y = month_average,
+           col = as.character(year_arrested))) +
+  geom_line() +
+  ylim(c(0, y_lim_max)) +
+  scale_color_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_x_date(date_labels = "%B",
+               breaks = as.Date(c("2020-01-01",
+                                  "2020-04-01",
+                                  "2020-07-01",
+                                  "2020-10-01")),
+               date_minor_breaks = "1 month") +
+  labs(x = "Date Arrested",
+       y = "Average Arrests by Month",
+       title = "Month Average By Date",
+       col = "Year") +
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 1))
+```
+
+The warnings appear because the rolling averages drop the ends. 
+
+Using averages to smooth out the data does reveal some trends. The monthly average really shows the increase in arrests during the summer, except for 2020.
+
+```{r cumulative}
+# Cumulative Arrests ----
+label_data <- data_summary %>%
+  group_by(year_arrested) %>%
+  slice_max(date_arrested)
+
+ggplot(data = data_summary,
+       aes(x = graph_date,
+           y = total_arrest_cumulative,
+           col = as.character(year_arrested))) +
+  geom_line() +
+  scale_color_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_y_continuous(label = comma) +
+  scale_x_date(date_labels = "%B",
+               breaks = as.Date(c("2020-01-01",
+                                  "2020-04-01",
+                                  "2020-07-01",
+                                  "2020-10-01")),
+               date_minor_breaks = "1 month",
+               limits = as.Date(c("2020-01-01", "2021-01-15"))) +
+  labs(x = "Date Arrested",
+       y = "Cumulative Arrests",
+       title = "Cumulative Arrests By Date") +
+  geom_text_repel(data = label_data,
+                  aes(x = graph_date,
+                      y = total_arrest_cumulative,
+                      label = year_arrested),
+                  nudge_x      = 15,
+                  direction    = "y",
+                  hjust        = 0.5,
+                  segment.size = 0.2) +
+  theme(legend.position = "none")
+```
+
+Smoothing out the counts by looking at cumulative arrests over time shows that most years tend to be similar. 2020 stands out as starting with a high number of arrests then quickly dropping. The total at the end of the year has a U-shape over time. The yearly totals start high during 2012-2013 drop with 2014-2016 then rise back up during 2017-2019.
+
+```{r day_count}
+# Count of arrests per day ----
+ggplot(data = data_summary,
+       aes(x = total_arrests,
+           fill = as.character(year_arrested))) +
+  geom_histogram(binwidth = 5,
+                 boundary = 0,
+                 col = "white") +
+  scale_fill_manual(values = sequential_hcl(9, palette = "Viridis")) +
+  scale_x_continuous(breaks = NULL,
+                     minor_breaks = seq(0, y_lim_max, by = 25)) +
+  labs(x = "Number of Arrests",
+       y = "Number of Days",
+       title = "Number of Days by Number of Arrests",
+       fill = "Year") +
+  facet_wrap(~ year_arrested, nrow = 3) +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 1))
+```
+
+Finally, showing the number of days with the same count of arrests doesn't offer a lot. About 20 to 35 arrests per day are the most common but 5 to 50 are routine. The distribution skews right a little, which makes sense because they have to be non-negative but aren't huge numbers. 2020 has a smaller count because the data isn't finished yet.

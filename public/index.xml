@@ -6,10 +6,28 @@
     <description>Recent content on William Tyler Bradley</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 15 May 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 14 Aug 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>ADP First Pass: Arrests By Offense Type</title>
+      <link>/2020/08/14/adp-first-pass-arrests-by-offense-type.en-us/</link>
+      <pubDate>Fri, 14 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/08/14/adp-first-pass-arrests-by-offense-type.en-us/</guid>
+      <description>This next post investigates the arrests&amp;rsquo; offense types.</description>
+    </item>
+    
+    <item>
+      <title>ADP First Pass: Arrests Over Time</title>
+      <link>/2020/08/11/adp-first-pass-arrests-over-time.en-us/</link>
+      <pubDate>Tue, 11 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/08/11/adp-first-pass-arrests-over-time.en-us/</guid>
+      <description>The first pass of some of the Asheville Police Department (ADP) data gets covered in the next blog post series. The goal is to get an overview of the data by pulling in related data sets, organizing on a couple of themes, and graphing to see any trends.</description>
+    </item>
     
     <item>
       <title>Calathea Theme</title>
