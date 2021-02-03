@@ -1,0 +1,529 @@
+---
+title: GENUARY 2021
+author: Tyler
+date: '2021-01-31'
+slug: genuary-2021
+categories: []
+tags:
+  - Generative Art
+summary: "GENUARY 2021: Art and Experience"
+thumbnailImage: /post/2021-01-31-genuary-2021/index.en-us_files/JAN_01.png
+thumbnailImagePosition: "left"
+---
+
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<p>This post goes through my experience of using R for <a href="https://genuary2021.github.io/" target="_blank">GENUARY 2021</a>. GENUARY is a set of daily prompts for generative art. It was a challenge, but I got a lot of it.</p>
+<p>The three main takeaways from my experience are:</p>
+<ol style="list-style-type: decimal">
+<li><p>Having a ‘times-up-step-away-from-the-keyboard’ attitude was vital for getting me through this project. Unfortunately, several works ended up unfinished for what I wanted, and there are probably bugs left in the code. Normally I hate that, but time-based stopping surprisingly set up a good attitude the next day. Having a plan to avoid burn-out is a necessity (like GENUARY warns).</p></li>
+<li><p>Going wide instead of deep was great for the first GENUARY. I tried as many new packages, programming techniques, and art styles as I could. I’ll mark the packages on at least the first day throughout this post. The R community’s numerous packages and blogposts are incredibly helpful.</p></li>
+<li><p><code>ggplot2</code> is amazing to use. This package saves an incredible amount of time. I have an advantage from previous experience, but it is so easy to wrap up a lot of data prep into something nice.</p></li>
+</ol>
+<p>You can check out the code <a href="https://github.com/WilliamTylerBradley/genuary2021" target="_blank">here</a>.</p>
+<div id="jan.1-triple-nested-loop" class="section level1">
+<h1>JAN.1 // TRIPLE NESTED LOOP</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I started out avoiding for loops (spoiler alert: used on day three). So for this one, I created a double nested tibble to get three layers. The first layer lists coefficients and standard deviations to generate data for a regression. The number of observations and then the raw data are the final two layers. The code runs through linear models for each data set. The output graphs the number of observations on the y axis, the estimated coefficient on x, and the summary statistic for sigma as the size. Color also maps to x. The effect isn’t a complicated picture, but I do like the bubbling up action. I used <code>dplyr</code>, <code>purrr</code>, <code>tidyr</code>, and <code>ggplot2</code>.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_01.png" alt="JAN_01" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_01
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.2-rule-30-elementary-cellular-automaton" class="section level1">
+<h1>JAN.2 Rule 30 (elementary cellular automaton)</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I used <code>data.table</code> for data manipulation. The rules increase the dataset by adding new columns and using shift (lead/lag) to get the input subsets. The outcome was supposed to emphasize that each cell depends on three other cells, but I ran out of time before I got anywhere.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_02.png" alt="JAN_02" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_02
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.3-make-something-human." class="section level1">
+<h1>JAN.3 Make something human.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The <code>gganatogram</code> package produces the human diagrams. <code>viridis</code> helps with color and <code>gridExtra</code> for layout. The output is accidentally oddly shaped.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_03.png" alt="JAN_03" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_03
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.4-small-areas-of-symmetry." class="section level1">
+<h1>JAN.4 Small areas of symmetry.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>Blackwork cross stitch serves as the basis here. The small patterns are hardcoded, and I’ll probably try generating them randomly one day.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_04.png" alt="JAN_04" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_04
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.5-do-some-code-golf-how-little-code-can-you-write-to-make-something-interesting-share-the-sketch-and-its-code-together-if-you-can." class="section level1">
+<h1>JAN.5 Do some code golf! How little code can you write to make something interesting? Share the sketch and its code together if you can.</h1>
+<blockquote class="twitter-tweet">
+<p lang="en" dir="ltr">
+For today’s <a href="https://twitter.com/hashtag/genuary?src=hash&amp;ref_src=twsrc%5Etfw">#genuary</a> <a href="https://twitter.com/hashtag/genuary2021?src=hash&amp;ref_src=twsrc%5Etfw">#genuary2021</a> prompt, I tried to use <a href="https://twitter.com/hashtag/rstats?src=hash&amp;ref_src=twsrc%5Etfw">#rstats</a> to recreate Georg Nees' Schotter. My goal was to get something close to the original, have the code fit in a tweet, and give base R a good shot before using other packages. Here’s what I got:
+</p>
+— Tyler (<span class="citation">@w_tyler_bradley</span>) <a href="https://twitter.com/w_tyler_bradley/status/1346675381772955650?ref_src=twsrc%5Etfw">January 6, 2021</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<pre class="r"><code>f=function(i){l=ceiling(i/12);u=2*(l-1);
+t=(c(1,3,5,7)*45+runif(1,-u,u))*.0174;
+m=rnorm(2,0,l/90);s=.707;
+x=c(s*cos(t)+m[1]+i%%12,NA);
+y=c(s*sin(t)+m[2]-l,NA);
+data.frame(x,y)}
+df=do.call(rbind,lapply(1:288,f));
+plot(-5:25,-30:0,&quot;n&quot;,ax=F,an=F,as=1);
+polygon(df$x,df$y)</code></pre>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_05_tweet.png" alt="JAN_05" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_05
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.6-triangle-subdivision." class="section level1">
+<h1>JAN.6 Triangle subdivision.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>A function subdivides the triangles but keeps the same pattern of either lightening or darkening the base color. The <code>colorspace</code> package provides the color manipulation capabilities.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_06.png" alt="JAN_06" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_06
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.7-generate-some-rules-then-follow-them-by-hand-on-paper." class="section level1">
+<h1>JAN.7 Generate some rules, then follow them by hand on paper.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I didn’t do this one. I took time off because of my birthday and to keep up with the (unrelated) coup attempt.</p>
+</div>
+<div>
+<center>
+<code>NA</code>
+</center>
+</div>
+</div>
+</div>
+<div id="jan.8-curve-only." class="section level1">
+<h1>JAN.8 Curve only.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>Pursuit curves set up this work. Several trails of points chase after one point moving around in a circle. The <code>deSolve</code> package handles most of the math.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_08.png" alt="JAN_08" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_08
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.9-interference-patterns." class="section level1">
+<h1>JAN.9 Interference patterns.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p><code>ggforce</code> provides the geom for circles. I’m not sure I really get inference patterns and I feel like this was a swing and a miss from me.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_09.png" alt="JAN_09" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_09
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.10-tree" class="section level1">
+<h1>JAN.10 // TREE</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>Code using <code>ape</code>, <code>phytools</code>, and <code>stringr</code> create and draw a random phylogenetic tree. Where parenthesizes and dashes fall in a string determine the tree’s structure.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_10.png" alt="JAN_10" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_10
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.11-use-something-other-than-a-computer-as-an-autonomous-process-or-use-a-non-computer-random-source." class="section level1">
+<h1>JAN.11 Use something other than a computer as an autonomous process (or use a non-computer random source).</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p><a href="https://blog.cloudflare.com/lavarand-in-production-the-nitty-gritty-technical-details/" target="_blank">Cloudflare’s use of lava lamps for randomness</a> inspired this work. I picked a gif of a lava lamp and convert it to binary using the <code>magick</code> package.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_11.gif" alt="JAN_11" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_11
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.12-use-an-api-e.g.-the-weather.-heres-a-huge-list-of-free-public-apis." class="section level1">
+<h1>JAN.12 Use an API (e.g. the weather). Here’s <a href="https://github.com/public-apis/public-apis" target="_blank">a huge list of free public APIs</a>.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I use <code>tidycensus</code>, <code>tidyverse</code>, <code>sf</code>, and <code>ggridges</code> to pull population by county, group by state/territory, average over longitude to create ridges, and center them. I tried this out in Joy Division’s Unknown Pleasures style, but it was too busy for me.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_12.png" alt="JAN_12" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_12
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.13-do-not-repeat." class="section level1">
+<h1>JAN.13 Do not repeat.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I avoided repeating by basing the work on prime numbers using the <code>primes</code> package. I also used the built-in <code>as.roman()</code> function to convert numbers to Roman numerals.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_13.png" alt="JAN_13" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_13
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.14-subdivision" class="section level1">
+<h1>JAN.14 // SUBDIVISION</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I really struggled on this one. There are supposed to be four images colored by <code>tvthemes</code>, one for each of the Avatar: The Last Airbender nations. I couldn’t get it to work with any shape that wasn’t a square. I think the real issue is that <code>sf</code> just wasn’t built for what I was trying to do.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_14.png" alt="JAN_14" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_14
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.15-let-someone-else-decide-the-general-rules-of-your-piece." class="section level1">
+<h1>JAN.15 Let someone else decide the general rules of your piece.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The rules are from the snakes and ladders board game. The code generates a random board, simulates through several players, and graphs the results. I got to use a while loop since the game doesn’t end until falling precisely on the 100th square.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_15.png" alt="JAN_15" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_15
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.16-circles-only" class="section level1">
+<h1>JAN.16 Circles only</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>A phyllotaxis arrangement places the circles for this work. This is one of the most simple outputs but still one of my favorites. The 100 small circles repeat in the 16 sets, but sizes change based on their order modulo 16. Within each set, the locations are all the same.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_16.png" alt="JAN_16" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_16
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.17-draw-a-line-pick-a-new-color-move-a-bit." class="section level1">
+<h1>JAN.17 Draw a line, pick a new color, move a bit.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The endpoints of the lines are points on two bounded random walks. I used <code>grid</code> to draw and move separately. The <code>colorspace</code> mixes colors from the endpoint locations. The <code>ragg</code> package helps with drawing over a million lines.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_17.png" alt="JAN_17" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_17
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.18-one-process-grows-another-process-prunes." class="section level1">
+<h1>JAN.18 One process grows, another process prunes.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>This work samplings points from several normal distributions using <code>MASS</code> for growth. Then samples from smaller normal distributions, find the closest point from the first set, and removes them. The <code>anti_join()</code> function made the pruning very easy. <code>hexbin</code> graphs the final dataset.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_18.png" alt="JAN_17" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_17
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.19-increase-the-randomness-along-the-y-axis." class="section level1">
+<h1>JAN.19 Increase the randomness along the Y-axis.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I had a lot of problems with this one too. It was supposed to be based on multi-level modeling, but I couldn’t get it working and ran out of time. This one ended up as samples from t-distributions with decreasing degrees of freedom. The top one is a Cauchy distribution.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_19.png" alt="JAN_19" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_19
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.20-no-loops." class="section level1">
+<h1>JAN.20 No loops.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I wanted something that looked like the code would have loops but then not actually use any. That’s not too difficult with R. The patterns are various hypotrochoids on a grid background.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_20.png" alt="JAN_20" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_20
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.21-function-fx-drawx-f1-x-4-f2-x-4-f3-x-4" class="section level1">
+<h1>JAN.21 function f(x) { DRAW(x); f(1 * x / 4); f(2 * x / 4); f(3 * x / 4); }</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The recursive code starts with veins growing out of the middle towards the edges of a triangle. They increase in number based on one parameter and decrease in length based on the other. If you look really closely, some lines are drawn over points instead of having all the lines drawn then points. That is done using <code>grid</code>.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_21.png" alt="JAN_21" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_21
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.22-draw-a-line.-wrong-answers-only." class="section level1">
+<h1>JAN.22 Draw a line. Wrong answers only.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>This isn’t a line. It’s a circle, a great circle. The additional <code>rnaturalearth</code>, <code>rnaturalearthdata</code>, and <code>geosphere</code> packages provide the data and functions. I had a lot of issues getting randomly drawn maps to look good. So there is only one. I like that it fell on New Zealand, where R originated.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_22.png" alt="JAN_22" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_22
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.23-264653-2a9d8f-e9c46a-f4a261-e76f51-no-gradients.-optionally-you-can-use-a-black-or-white-background." class="section level1">
+<h1>JAN.23 #264653 #2a9d8f #e9c46a #f4a261 #e76f51, no gradients. Optionally, you can use a black or white background.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The Copperajah Pokemon is the foundation here. The colors match the prompt, and the Pokemon’s design provides the shapes. They repeat on grids based on primes numbers, but I don’t think that showed nicely.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_23.png" alt="JAN_23" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_23
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.24-500-lines." class="section level1">
+<h1>JAN.24 500 lines.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>This is supposed to be a drawing of my family’s dog. It’s just the head. The eyes, nose, and ears are the darker sections. I use the <code>png</code> package to read in the image and determine the path using <code>TSP</code> to solve the traveling salesman problem. The sampling of points could be a lot better, especially on the edges. Although, I’m not sure 500 lines will cut it here.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_24.png" alt="JAN_24" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_24
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.25-make-a-grid-of-permutations-of-something." class="section level1">
+<h1>JAN.25 Make a grid of permutations of something.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>Permutations of quadratic bézier curves provide the grid. The endpoints of each curve are separated one unit horizontally. The interior control points permute around pentagons centered on the endpoints. The change along the x-axis adjusts the first control point while the y-axis has the second. Then, additional bézier curves are created between sets on the same line to connect them nicely.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_25.png" alt="JAN_25" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_25
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.26-2d-perspective." class="section level1">
+<h1>JAN.26 2D Perspective.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>A Hilbert curve is given a few glitches and bent to give a 2D perspective illusion. The Hilbert curve code uses look-up tables for the rules with <code>data.table</code>.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_26.png" alt="JAN_26" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_26
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.27-monochrome-gradients-without-lines." class="section level1">
+<h1>JAN.27 Monochrome gradients without lines.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>The output is not monochrome because the prompt didn’t specify that at the beginning of the month. I had the tab open and never hit refresh. So I didn’t know about the update until after I finished. I like the colors from <code>katiejolly/nationalparkcolors</code> and decided to keep them. The shapes are Poisson disk sampled using <code>coolbutuseless/poissoned</code> and outlined using Voronoi diagrams from <code>ggvoronoi</code>. There are multiple layers with decreasing alpha values.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_27.png" alt="JAN_27" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_27
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.28-use-sound." class="section level1">
+<h1>JAN.28 Use sound.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I used Spotify data with the <code>charlie86/spotifyr</code> package for the sound requirement. Each of the lines is a different top 50 song with parameters from their data. The <code>moldach/vapoRwave</code> package provides the colors.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_28.png" alt="JAN_28" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_28
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.29-any-shape-none-can-touch." class="section level1">
+<h1>JAN.29 Any shape, none can touch.</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p><code>ggrepel</code> made this a pretty easy prompt. I copied the text from the Introduction to R section on the <a href="https://www.r-project.org/about.html" target="_blank">R website</a> for the shapes. Their locations are sampled from the R logo. The R logo image is read in and manipulated using <code>imager</code>.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_29.png" alt="JAN_29" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_29
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="jan.30-replicate-a-natural-concept-e.g.-gravity-flocking-path-following." class="section level1">
+<h1>JAN.30 Replicate a natural concept (e.g. gravity, flocking, path following).</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I finally got to use <code>rayshader</code>. This gif is supposed to replicate tides. The terrain comes from sampling font with <code>extrafont</code> combined with noise from <code>ambient</code>.</p>
+</div>
+<div>
+<center>
+<a href="https://github.com/WilliamTylerBradley/genuary2021/blob/main/JAN_30.gif" target="_blank">Too big to fit. So click here.</a>
+</center>
+</div>
+</div>
+</div>
+<div id="jan.31-10-search-for-enos-oblique-strategies-20-obtain-one-30-that-is-your-prompt-for-today" class="section level1">
+<h1>JAN.31 10 SEARCH FOR “ENO’S OBLIQUE STRATEGIES” 20 OBTAIN ONE 30 THAT IS YOUR PROMPT FOR TODAY</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; grid-column-gap: 10px; align-items: start;">
+<div>
+<p>I got <a href="http://stoney.sb.org/eno/oblique.html" target="blank">‘Emphasize repetitions’</a>. This work is motivated by the repetitive act of knitting. The shading is normal error on top of an arima model that zig-zags up the y-axis.</p>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-01-31-genuary-2021/index.en-us_files/JAN_31.png" alt="JAN_31" style="display:block; margin:auto;" />
+<p class="caption">
+JAN_31
+</p>
+</div>
+</div>
+</div>
+</div>

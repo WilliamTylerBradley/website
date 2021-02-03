@@ -208,4 +208,4 @@ canonifyurls = true
   #   copyright = "<a href=\"https://github.com/kakawait\">kakawait</a>"
 
 # Recommendation to ignore certain files in config.toml  
-ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]  
+ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\\.md$"]
