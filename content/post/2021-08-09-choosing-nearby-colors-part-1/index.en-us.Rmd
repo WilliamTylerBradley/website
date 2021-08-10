@@ -1,0 +1,10 @@
+---
+title: Choosing Nearby Colors Part 1
+author: Tyler
+date: '2021-08-09'
+slug: index.en-us
+categories: []
+tags: []
+---
+
+<!--more-->
