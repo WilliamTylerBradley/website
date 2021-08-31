@@ -3,8 +3,1103 @@ title: Choosing Nearby Colors Part 1
 author: Tyler
 date: '2021-08-09'
 slug: index.en-us
-categories: []
-tags: []
+summary: Attempting to select colors close to a chosen one.
+thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png
+thumbnailImagePosition: "right"
 ---
 
-<!--more-->
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_knit$set(bookdown.internal.label = FALSE)
+knitr::opts_chunk$set(out.extra = 'style="display:block; margin:auto;"')  # center
+```
+
+Update ellipse radius notes. Specify base point
+
+This blogpost talks about selecting colors nearby to a chosen one. Selecting colors like this is needed for a generative art project I'm programming. For some background, I'm using the HCL color space. I'm not going to go into a lot of details on HCL for this post. You only need to HCL specifies unique colors by **H**ue, **C**hroma, and **L**uminance and these follow polar coordinates. Hue determines the type of color (like red, blue, green) and is specified by degrees around a circle. Chroma determines how much color is involved, ranging from gray to deep colors, and is the radius. Luminance is the brightness and ranges from 0 for black and 100 for white along the z-axis. Playing around hclwizard color picker [(here)](http://hclwizard.org:3000/hclcolorpicker/){target="_blank"} will help your understanding of how the parameters work. Lastly, this color space was chosen because it is perceptually uniform, so moving one unit distance in any direction gives colors that look about the same difference. More details can be found [here](https://en.wikipedia.org/wiki/HCL_color_space){target="_blank"} and [here](https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_.28CIELCH.29){target="_blank"}.
+
+<hr>
+<center><h2>Now for the R code</h2></center>
+<hr>
+
+These libraries set up data manipulation, combining graphs, and using the HCL color space.
+
+```{r libraries}
+##---------
+# Libraries
+##---------
+library(tidyverse)
+library(patchwork)
+library(colorspace)
+```
+
+We'll set up some code to get a green color based on H, C, and L. We'll also create a data set called `color_points`. This will only have one observation for right now, but we will add in more rows later. It'll serve has a place holder for functions graphs different shapes.
+
+```{r pick_color}
+##------------
+# Pick a color
+##------------
+H_point <- 112
+C_point <- 60
+L_point <- 68
+
+color_hex <- hcl(H_point, 
+                 C_point,
+                 L_point,
+                 fixup = FALSE)
+
+color_points <- data.frame(x = C_point * cos(H_point * pi/180),
+                           y = C_point * sin(H_point * pi/180),
+                           z = L_point,
+                           H = H_point,
+                           C = C_point,
+                           L = L_point,
+                           color_value = color_hex,
+                           perpendicular_from_C_L = 0,
+                           parallel_along_C_L = 0,
+                           row_value = 0,
+                           col_value = 0)
+```
+
+Let's see where this color exists in the HCL color space and create some helper functions.
+
+We'll start out with looking at the Chroma-Luminance plane (C-L Plane). We want to graph slicing the HCL color space in half from the top to the bottom along the line H = 112. (`H_point` = 112)
+
+```{r color_c_l_plane}
+##--------------------------------
+# See color in H, C, L color space 
+##--------------------------------
+# C-L Plane ----
+get_C_L_plane <- function(H_point) {
+  expand_grid(H = H_point,
+              C = seq(0, 180, .5),
+              L = seq(1, 100, .5)) %>%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+    filter(!is.na(color_value))
+}
+C_L_plane <- get_C_L_plane(H_point)
+
+graph_C_L_plane <- function(C_L_plane, color_points, color_hex) {
+  ggplot() +
+    geom_point(data = C_L_plane,
+               aes(C, L, color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes(C, L, color = "white", fill = "white")) +
+    scale_x_continuous(labels = abs) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    geom_point(aes(x = C_point,
+                   y = L_point),
+               color = 'black',
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_equal()
+}
+graph_C_L_plane(C_L_plane, color_points, color_hex)
+```
+```{r color_c_l_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_l_plane.png', error = FALSE)
+```
+
+We can see as the Luminance increases, the shades move from darker to lighter and as Chroma moves out from 0, the color is more intense. The `get_C_L_plane` function returns a data set with points on that plane. For this blog post, functions that start with "get" return points on something we're going to graph while functions that start with "graph" display them appropriately. This plane extends over to the left where the H value would be the current H + 180. I'm not graphing that because this project will keep values close to the original and that changes the Hue too much. 
+
+From here down, I'll hide some of the code that's similar to previous sections to shorten the post. You can click on <span style="color: #C29CB7 ">[texts]</span> for showing code if you want to see it.
+
+Next, we can see the color falls with all the other colors for the same Chroma value. I think about Chroma values as tree rings. So, this image takes the HCL color space, drills out the center for lower Chroma values, then has you stand in the middle facing the Hue value, pulling the shape away from behind you and laying it flat. 
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r color_h_l_curve, message = FALSE, warning = FALSE}
+# H-L Curve ----
+get_H_L_curve <- function(C_point) {
+  expand_grid(H = seq(1, 360, 1),
+              C = C_point,
+              L = seq(1, 100, .5)) %>%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+    filter(!is.na(color_value))
+}
+H_L_curve <- get_H_L_curve(C_point)
+
+label_H_center <- function(H_point, ...) {
+  function(x) {(x + (180 - H_point)) %% 360}
+}
+
+graph_H_L_curve <- function(H_L_curve, color_points, color_hex, H_point) {
+  ggplot() +
+    geom_point(data = H_L_curve,
+               aes((H + (180 - H_point)) %% 360, L, 
+                   color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes((H + (180 - H_point)) %% 360, L, 
+                   color = "white", fill = "white")) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    geom_point(aes(x = 180, # Because we rotated points to not drop over edge
+                   y = L_point),
+               color = 'black',
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    scale_x_reverse('H', # Like you're standing on the inside
+                    labels = label_H_center(H_point = H_point),
+                    limits = c(360, 0)) +
+    coord_equal()
+}
+graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+```
+</details> <br>
+```{r color_h_l_curve_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_l_curve.png', error = FALSE)
+```
+
+You can see the odd shape of the HCL color space where the different Hues don't stretch their Chroma values out at different Luminance values. This is the only graph that shows a flatten curve. Everything else displays a sharp slice. For all the H-L curve graphs, the Hue value has be rotated to be the center.
+
+Now we can look at cutting horizontally through the HCL color space where L = 68. (`L_point` = 68)
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r color_h_c_plane, message = FALSE, warning = FALSE}
+# H-C plane ----
+get_H_C_plane <- function(L_point){
+  expand_grid(H = seq(1, 360, 1),
+              C = seq(0, 180, .5),
+              L = L_point) %>%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+    filter(!is.na(color_value))
+}
+H_C_plane <- get_H_C_plane(L_point)
+
+graph_H_C_plane <- function(H_C_plane, color_points, color_hex) {
+  ggplot() +
+    geom_point(data = H_C_plane,
+               aes(H, C, color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes(H, C, color = "white", fill = "white")) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_continuous(breaks = seq(45, 360, 45),
+                       minor_breaks = seq(0, 315, 45) + 45/2,
+                       labels = c('45', '90', '135', '180', 
+                                  '225', '270', '315', '0|360')) +
+    scale_y_continuous(limits = c(0, 180)) +
+    geom_point(aes(x = H_point,
+                   y = C_point),
+               color = 'black',
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_polar(start = 270 * pi / 180,
+                direction = -1)
+}
+graph_H_C_plane(H_C_plane, color_points, color_hex)
+ggsave(here::here("output", "color_investigation", "h_c_plane.png"), 
+       width = 5, height = 5)
+```
+</details><br>
+```{r color_h_c_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png', error = FALSE)
+```
+
+We can see the different colors as Hue moves around a circle and their increased intensity as Chroma moves out to the edges. The shape is not circular because the HCL color space isn't. 
+
+There is one more graph to see. We looked at cutting the HCL color space along the Hue, Chroma, and Lumanince values, but the Chroma image was a fallen curve. Instead, we can cut a place at the Chroma value but tangent to the circle constant Chroma values create. The next image sets up the explanation, then we'll see the actual plane.
+
+<details>
+  <summary>[C Tangent Plane Setup Code]</summary>
+```{r c_tangent_setup, message = FALSE, warning = FALSE}
+# C tangent plane ----
+C_circle <- data.frame(H = seq(1, 360),
+                       C = C_point,
+                       color_value = "white")
+C_tangent_plane <- expand_grid(x = C_point, # Plane perpendicular to H at C
+                       perpendicular_from_C_L = 
+                         seq(-sqrt(180^2 - C_point^2), sqrt(180^2 - C_point^2)),
+                       L = seq(1, 100, 1)) %>%
+  mutate(x_rotate = x * cos(H_point * pi/180) -  # rotate
+           perpendicular_from_C_L * sin(H_point * pi/180),
+         y_rotate = x * sin(H_point * pi/180) + 
+           perpendicular_from_C_L * cos(H_point * pi/180)) %>%
+  mutate(x = x_rotate,
+         y = y_rotate) %>%
+  select(-x_rotate, -y_rotate)  %>%
+  mutate(H = (atan2(y, x) * 180/pi) %% 360,
+         C = sqrt(x^2 + y^2)) %>%
+  mutate(color_value = "white")
+ggplot(data = H_C_plane,
+       aes(H, C, color = color_value, fill = color_value)) +
+  geom_point() +
+  scale_color_identity() +
+  scale_fill_identity() +
+  scale_x_continuous(breaks = seq(45, 360, 45),
+                     minor_breaks = seq(0, 315, 45) + 45/2,
+                     labels = c('45', '90', '135', '180', 
+                                '225', '270', '315', '0|360')) +
+  scale_y_continuous(limits = c(0, 180)) +
+  geom_path(data = C_circle) +
+  geom_segment(x = H_point,
+               y = 0,
+               xend = H_point,
+               yend = C_point,
+               col = "white") +
+  geom_point(data = C_tangent_plane, col = "black") +
+  geom_point(x = H_point,
+             y = C_point,
+             color = 'black',
+             fill = color_hex,
+             shape = 21) +
+  coord_polar(start = 270 * pi / 180,
+              direction = -1)
+```
+</details><br>
+```{r c_tangent_setup_image, eval = TRUE, echo = FALSE, fig.cap = "C Tangent Plane setup"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane_setup.png', error = FALSE)
+```
+
+Chroma and Luminance move in straight lines but Hue is circular. We can see this in the image with the white circle where Chroma and Luminance are constant but Hue moves all the way around the circle. This means looking at images of shapes can be distorted when graphing them flat. So we might want to see what happens as we move away from our specific color in a straight line perpendicular to the C-L Plane. That's the black line. We're going to cut the HCL space from top to bottom along this line.
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r color_c_tangent_plane, message = FALSE, warning = FALSE}
+get_C_tangent_plane <- function(H_point, C_point) {
+  expand_grid(x = C_point, # Plane perpendicular to H at C
+              perpendicular_from_C_L = seq(-180, 180, .5),
+              L = seq(1, 100, .5)) %>%
+    mutate(x_rotate = x * cos(H_point * pi/180) -  # rotate
+             perpendicular_from_C_L * sin(H_point * pi/180),
+           y_rotate = x * sin(H_point * pi/180) + 
+             perpendicular_from_C_L * cos(H_point * pi/180)) %>%
+    mutate(x = x_rotate,
+           y = y_rotate) %>%
+    select(-x_rotate, -y_rotate)  %>%
+    mutate(H = (atan2(y, x) * 180/pi) %% 360,
+           C = sqrt(x^2 + y^2)) %>%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+    filter(!is.na(color_value))
+}
+C_tangent_plane <- get_C_tangent_plane(H_point, C_point)
+
+graph_C_tangent_plane <- function(C_tangent_plane, color_points, color_hex) {
+  ggplot() +
+    geom_point(data = C_tangent_plane,
+               aes(perpendicular_from_C_L, L, 
+                   color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes(perpendicular_from_C_L, L, 
+                   color = "white", fill = "white")) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_reverse("Distance Perpendicular to C-L Plane",
+                    labels = abs) +
+    geom_point(aes(x = 0,
+                   y = L_point),
+               color = 'black',
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_equal()
+}
+graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+```
+</details><br>
+```{r color_c_tangent_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane.png', error = FALSE)
+```
+
+This show the plane perpendicular to the C-L Plane at C = 60. A horizontal line drawn at the point on this image matches where the black intersects the H-C plane in the previous graph. This image isn't super helpful here, but it can be when we check shapes later.
+
+<hr>
+<center><h2>Nearby points in a sphere</h2></center>
+<hr>
+
+Let's start out with drawing random points inside a sphere with width of 5 centered on our chosen color. 
+
+The code below draws random points in a unit sphere, stretches it to be the right size, then moves it to our color. After that, the code converts it to HCL coordinates, converts these to a color, then creates some nice variables that will be used for plotting later.
+
+```{r sphere, message = FALSE, warning = FALSE}
+##------
+# Sphere
+##------
+radius <- 5
+n_points <- 250^2
+
+color_points <- data.frame(x = rnorm(n = n_points),
+                           y = rnorm(n = n_points),
+                           z = rnorm(n = n_points),
+                           U = runif(n = n_points)^(1/3)) %>%
+  mutate(normalize = sqrt(x^2 + y^2 + z^2)) %>%
+  mutate(x = x * U / normalize,
+         y = y * U / normalize,
+         z = z * U / normalize) %>%
+  select(-U, -normalize) %>% # have random points in a sphere here
+  mutate(x = x * radius, # stretch
+         y = y * radius,
+         z = z * radius) %>%
+  mutate(x = x + C_point * cos(H_point * pi/180), # move
+         y = y + C_point * sin(H_point * pi/180),
+         z = z + L_point) %>%
+  mutate(H = (atan2(y, x) * 180/pi) %% 360,
+         C = sqrt(x^2 + y^2),
+         L = z) %>%
+  mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+  mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+           y * cos(-H_point * pi/180),
+         parallel_along_C_L = x * cos(-H_point * pi/180) - 
+           y * sin(-H_point * pi/180)) %>%
+  mutate(row_value = sample(row_number(), n()),
+         col_value = ceiling(row_value / sqrt(n_points))) %>%
+  mutate(row_value = (row_value %% sqrt(n_points)) + 1)
+```
+
+Here we see the values, base color, and the sample points.
+
+<details>
+  <summary>[Sphere Info Code]</summary>
+```{r sphere_info, message = FALSE, warning = FALSE}
+graph_info <- function(H_point, C_point, L_point) {
+  color_hex <- hcl(H_point, 
+                   C_point,
+                   L_point,
+                   fixup = FALSE)
+  
+  ggplot() +
+    geom_rect(aes(xmin = 0, xmax = 1,
+                  ymin = 0, ymax = .5), col = color_hex, fill = color_hex) +
+    geom_text(data = data.frame(x = 0,
+                                y = seq(1.5, .75, -.25),
+                                label = c(paste("HEX Value:", color_hex), 
+                                          paste("H Value:", H_point),
+                                          paste("C Value:", C_point),
+                                          paste("L Value:", L_point))),
+              aes(x, y, label = label), hjust = 0, size = 4) +
+    coord_equal() +
+    theme_void()
+}
+
+graph_sample <- function(color_points) {
+  ggplot(data = color_points,
+         aes(x = row_value,
+             y = col_value,
+             fill = color_value)) +
+    geom_tile() +
+    coord_equal() +
+    scale_fill_identity() +
+    theme_void()
+}
+
+p1 <- graph_info(H_point, C_point, L_point)
+p2 <- graph_sample(color_points)
+p1 + p2
+```
+</details><br>
+```{r sphere_info_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: Base Color and Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_info.png', error = FALSE)
+```
+
+We can reuse the previous functions to graph the planes with our sphere in white to get the outline shape by using the new points as the color_points parameter. Then we can just graph the new points to see how they look. In the next image, the left side has the previous C-L Plane image with points from the sphere blocked out in white. The right side has those same points with the correct color.
+
+<details>
+  <summary>[C-L Plane Code]</summary>
+```{r sphere_c_l, message = FALSE, warning = FALSE}
+graph_C_L <- function(color_points) {
+  ggplot(data = color_points, aes(C, L, col = color_value, fill = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    coord_equal() +
+    theme(axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank())
+}
+
+p1 <- graph_C_L_plane(C_L_plane, color_points, color_hex)
+p2 <- graph_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r sphere_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_c_l.png', error = FALSE)
+```
+
+Now, we can continue with the others starting with the H-L Curve. It's hard to tell in this image, but the shape isn't a perfect circle. It's slightly off because the Hue values curve through the sphere, then that intersection is flattened in the graph. This is more obvious for different values.
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r sphere_h_l, message = FALSE, warning = FALSE}
+graph_H_L <- function(color_points, H_point) {
+  ggplot(data = color_points, aes((H + (180 - H_point)) %% 360, L, 
+                                  col = color_value, fill = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_reverse() +
+    coord_equal() +
+    theme(axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank())
+}
+
+p1 <- graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+p2 <- graph_H_L(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r sphere_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_l.png', error = FALSE)
+```
+
+The next shape is a perfect circle because the plane perpendicular to the C-L Plane is already flat.
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r sphere_p_c_l, message = FALSE, warning = FALSE}
+graph_perpendicular_from_C_L <- function(color_points) {
+  ggplot(data = color_points, aes(perpendicular_from_C_L, L, 
+                                  color = color_value, fill = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity()  +
+    scale_x_reverse() +
+    coord_equal() +
+    theme(axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank())
+}
+
+p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+p2 <- graph_perpendicular_from_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r sphere_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_p_c_l.png', error = FALSE)
+```
+
+The last image is of the H-C Plane and the sphere based on x-y coordinates. The black line on the right-side is at H = 112.
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r sphere_h_c, message = FALSE, warning = FALSE}
+graph_x_y <- function(color_points, H_point) {
+  ggplot(data = color_points, aes(x, y, 
+                                  col = color_value, fill = color_value)) +
+    geom_abline(slope = c(tan(-67.5 * pi/180), 
+                          tan(-45 * pi/180), 
+                          tan(-22.5 * pi/180),
+                          0, 
+                          100000,
+                          tan(22.5 * pi/180), 
+                          tan(45 * pi/180), 
+                          tan(67.5 * pi/180)), 
+                intercept = 0,
+                color = "white") +
+    geom_abline(slope = tan(H_point * pi/180), 
+                intercept = 0,
+                color = "black") +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    coord_equal() +
+    theme(axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank(),
+          panel.grid.major=element_blank(), panel.grid.minor=element_blank())
+}
+
+p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
+p2 <- graph_x_y(color_points, H_point)
+p1 + p2
+ggsave(here::here("output", "color_investigation", "sphere_h_c.png"), 
+       width = 5, height = 2.5)
+```
+</details><br>
+```{r sphere_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_c.png', error = FALSE)
+```
+
+Now to expand this technique out a little more, we can stretch the sphere in different ways. 
+
+<hr>
+<center><h2>Nearby points in an ellipse</h2></center>
+<hr>
+
+The following code starts and ends with the same lines as the previous code for points in a sphere. There's are just two changes: stretching the sphere based on different amounts and rotating the points so the axes line up correctly. The `radius` parameter has been broken into three: `H_radius`, `C_radius`, and `L_radius`. The `C_radius` and `L_radius` stretch the sphere along those directions from the point. The `H_radius` is a little misnomer because it's stretching perpendicular to the C-L Plane, which is similar to how Hue changes but doesn't exactly match the curve. 
+
+```{r ellipse, message = FALSE, warning = FALSE}
+##-------
+# Ellipse
+##-------
+H_radius <- 2.5
+C_radius <- 5
+L_radius <- 10
+
+color_points <- data.frame(x = rnorm(n = n_points),
+                           y = rnorm(n = n_points),
+                           z = rnorm(n = n_points),
+                           U = runif(n = n_points)^(1/3)) %>%
+  mutate(normalize = sqrt(x^2 + y^2 + z^2)) %>%
+  mutate(x = x * U / normalize,
+         y = y * U / normalize,
+         z = z * U / normalize) %>%
+  select(-U, -normalize) %>% # have random points in a sphere here
+  mutate(x = x * C_radius, # stretch
+         y = y * H_radius,
+         z = z * L_radius) %>%
+  mutate(x_turn = x * cos(H_point * pi/180) - 
+           y * sin(H_point * pi/180), # rotate
+         y_turn = x * sin(H_point * pi/180) + 
+           y * cos(H_point * pi/180)) %>%
+  mutate(x = x_turn,
+         y = y_turn) %>%
+  select(-x_turn, -y_turn) %>%
+  mutate(x = x + C_point * cos(H_point * pi/180), # move
+         y = y + C_point * sin(H_point * pi/180),
+         z = z + L_point) %>%
+  mutate(H = (atan2(y, x) * 180/pi) %% 360,
+         C = sqrt(x^2 + y^2),
+         L = z) %>%
+  filter(L >= 0 & L <= 100 & C >= 0) %>%
+  mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+  mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+           y * cos(-H_point * pi/180),
+         parallel_along_C_L = x * cos(-H_point * pi/180) - 
+           y * sin(-H_point * pi/180)) %>%
+  mutate(row_value = sample(row_number(), n()),
+         col_value = ceiling(row_value / sqrt(n_points))) %>%
+  mutate(row_value = (row_value %% sqrt(n_points)) + 1)
+```
+
+<details>
+  <summary>[Ellipse Info Code]</summary>
+```{r ellipse_info, message = FALSE, warning = FALSE}
+p1 <- graph_info(H_point, C_point, L_point)
+p2 <- graph_sample(color_points)
+p1 + p2
+```
+</details><br>
+```{r ellipse_info_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: Base Color and Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_info.png', error = FALSE)
+```
+
+In this section's images, we can see how the sphere was stretched. If you're standing in the center of the HCL color space and face the point, the sphere was stretched to your left and right by the `H_radius` amount, to and away from you by `C_radius`, and vertically by `L_radius`.
+
+<details>
+  <summary>[C-L Plane Code]</summary>
+```{r ellipse_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_L_plane(C_L_plane, color_points, color_hex)
+p2 <- graph_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r ellipse_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_c_l.png', error = FALSE)
+```
+
+In the previous image, we can see the ellipse is `2 * L_radius` tall and `2 * C_radius` wide. In the next image, the ellipse is also `2 * L_radius` tall. It changed horizontally but not by `2 * H_radius`. This image displays the `C_point` radius circles as H changes through the HCL color space so the distance of stretching is a function of the arc length of those circles. The next images has the width of `2 * H_radius`.
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r ellipse_h_l, message = FALSE, warning = FALSE}
+p1 <- graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+p2 <- graph_H_L(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r ellipse_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_l.png', error = FALSE)
+```
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r ellipse_p_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+p2 <- graph_perpendicular_from_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r ellipse_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_p_c_l.png', error = FALSE)
+```
+
+Finally, we see the H-C plane with an ellipse that has one axis `2 * C_radius` long and the other of `2 * H_radius`. It's pointing to the center so which axis appears as height and width would change as H turns.
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r ellipse_h_c, message = FALSE, warning = FALSE}
+p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
+p2 <- graph_x_y(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r ellipse_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_c.png', error = FALSE)
+```
+
+While we're transforming the original sphere, we can add in tilting.
+
+<hr>
+<center><h2>Nearby points in a tilted ellipse</h2></center>
+<hr>
+
+For this project, I'm focusing on the Hue value so we'll always tilt along the C-L Plane. This means points with Hue = `H_point` will keep the same Hue as we tilt the top and bottom either closer to or farther away from the center. Other points will change their Hue because they'll move parallel to the C-L Plane but Hue values are at an angle to this plane. As we tilt we'll change the Chroma and Luminance values for all points except at the original point. 
+
+The following code is the same as the previous one but with the addition of tilting the ellipse by `tilt_theta`. There's a new parameter for the degree of tilt, `tilt_theta`. The radius parameters have changed to map to the axis that is tilted, `theta_radius`, the other radius on the C-L Plane, `other_C_L_radius`, and the one perpendicular to the other two, `perpendicular_C_L_radius` (which fixes the `H_radius` misnomer).
+
+There is also a little code that finds the `tilt_theta` that points the ellipse towards the farthest point on the C-L Plane. This helps stretch the ellipse without hitting an edge (but any theta can be used).
+
+```{r tilted_ellipse, message = FALSE, warning = FALSE}
+##--------------
+# Tilted Ellipse
+##--------------
+theta_radius <- 10
+other_C_L_radius <- 3
+perpendicular_C_L_radius <- 5
+
+# Try rotating to point major axis to max chroma value
+max_chromas <- max_chroma(h = H_point, l = seq(1, 100, .5))
+tilt_theta <- atan2(seq(1, 100, .5)[max(max_chromas) == max_chromas] - L_point,
+                     max(max_chromas) - C_point)
+
+color_points <- data.frame(x = rnorm(n = n_points),
+           y = rnorm(n = n_points),
+           z = rnorm(n = n_points),
+           U = runif(n = n_points)^(1/3)) %>%
+  mutate(normalize = sqrt(x^2 + y^2 + z^2)) %>%
+  mutate(x = x * U / normalize,
+         y = y * U / normalize,
+         z = z * U / normalize) %>%
+  select(-U, -normalize) %>% # have random points in a sphere here
+  mutate(x = x * theta_radius, # stretch
+         y = y * other_C_L_radius,
+         z = z * perpendicular_C_L_radius) %>%
+  mutate(z_tilt = z * cos(tilt_theta) + x * sin(tilt_theta), # tilt
+         x_tilt = z * -sin(tilt_theta) + x * cos(tilt_theta)) %>%
+  mutate(x = x_tilt,
+         z = z_tilt) %>%
+  select(-x_tilt, -z_tilt) %>%
+  mutate(x_turn = x * cos(H_point * pi/180) - 
+           y * sin(H_point * pi/180), # rotate
+         y_turn = x * sin(H_point * pi/180) + 
+           y * cos(H_point * pi/180)) %>%
+  mutate(x = x_turn,
+         y = y_turn) %>%
+  select(-x_turn, -y_turn) %>%
+  mutate(x = x + C_point * cos(H_point * pi/180), # move
+         y = y + C_point * sin(H_point * pi/180),
+         z = z + L_point) %>%
+  mutate(H = (atan2(y, x) * 180/pi) %% 360,
+         C = sqrt(x^2 + y^2),
+         L = z) %>%
+  filter(L >= 0 & L <= 100 & C >= 0) %>%
+  mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+  mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+           y * cos(-H_point * pi/180),
+         parallel_along_C_L = x * cos(-H_point * pi/180) - 
+           y * sin(-H_point * pi/180)) %>%
+  mutate(row_value = sample(row_number(), n()),
+         col_value = ceiling(row_value / sqrt(n_points))) %>%
+  mutate(row_value = (row_value %% sqrt(n_points)) + 1)
+```
+
+<details>
+  <summary>[Tilted Ellipse Info Code]</summary>
+```{r tilted_ellipse_info, message = FALSE, warning = FALSE}
+p1 <- graph_info(H_point, C_point, L_point)
+p2 <- graph_sample(color_points)
+p1 + p2
+```
+</details><br>
+```{r tilted_ellipse_info_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: Base Color and Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_info.png', error = FALSE)
+```
+
+The following image shows the tilt the best. We can see that it now points to the tip of the triangle.
+
+<details>
+  <summary>[C-L Plane Code]</summary>
+```{r tilted_ellipse_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_L_plane(C_L_plane, color_points, color_hex)
+p2 <- graph_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r tilted_ellipse_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_c_l.png', error = FALSE)
+```
+
+In the next image, the right side isn't quite symmetric across a horizontal line in the middle. The top is a little thinner than the bottom so it's more of an egg shape. That happens because the H values curve through the ellipse then are flatten into this image. Since different H values are reached for different C values and in this shape C and L are correlated. So in this image, as L changes, C is also changes, which affects which H values are reached by the edges. This graph won't always result in an egg shape, but it does in this case.
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r tilted_ellipse_h_l, message = FALSE, warning = FALSE}
+p1 <- graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+p2 <- graph_H_L(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r tilted_ellipse_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_l.png', error = FALSE)
+```
+
+The next time is symmetric across a horizontal line in the middle. Checking this feature is one of the main reasons for this graph.
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r tilted_ellipse_p_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+p2 <- graph_perpendicular_from_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r tilted_ellipse_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_p_c_l.png', error = FALSE)
+```
+
+Finally, the H-C Plane is shown. The length along the C line would be a function of the radii and tilt amount, but the perpendicular length is just `perpendicular_C_L_radius`.
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r tilted_ellipse_h_c, message = FALSE, warning = FALSE}
+p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
+p2 <- graph_x_y(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r tilted_ellipse_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_c.png', error = FALSE)
+```
+
+So far, this setup has a lot of flexibility but is also fragile. So, we'll bulk up the sampling function.
+
+<hr>
+<center><h2>Clean up the final function</h2></center>
+<hr>
+
+There's a couple of ways to get points that don't have actual values, such as outside the shape or Luminance values outside of [0, 100]. To handle this, we'll add in a feature that over samples points, only keeps the ones that have a color, then samples down to the desired amount. The new `oversample` parameter adds in the extra points. This could be down in a while loop, but this is fast enough and normally works. 
+
+We might also want to limit the Hue values. For example, if we want to keep in the red region without going to purple or orange, this will prevent that even if our `perpendicular_C_L_radius` is too large. We'll just crop any points out that go past those bounds.
+
+Finally, the HCL color space is oddly shaped so it's possible to sample points that are unevenly distributed along either side of the `H_point` value. That could shift the overall average Hue. To prevent that, I'm adding a catch that if the point couldn't exist on the other side of the Hue values, then discard it. That'll make the final regions trimmed out of the ellipse to be symmetric across `H_point`.
+
+```{r clean_up, message = FALSE, warning = FALSE}
+##--------
+# Clean up
+##--------
+# sampling, hitting edges
+# within h bounds, this also catches C on the other side
+# symmetric on H
+
+H_bound <- 3 # up to 90
+get_color_points <- function(n_points, oversample,
+                             H_point, C_point, L_point,
+                             theta_radius, other_C_L_radius, 
+                             perpendicular_C_L_radius,
+                             tilt_theta, H_bound) {
+  data.frame(x = rnorm(n = n_points * oversample), # over sample in case some points fail
+             y = rnorm(n = n_points * oversample),
+             z = rnorm(n = n_points * oversample),
+             U = runif(n = n_points * oversample)^(1/3)) %>%
+    mutate(normalize = sqrt(x^2 + y^2 + z^2)) %>%
+    mutate(x = x * U / normalize,
+           y = y * U / normalize,
+           z = z * U / normalize) %>%
+    select(-U, -normalize) %>% # have random points in a sphere here
+    mutate(x = x * theta_radius, # stretch
+           y = y * other_C_L_radius,
+           z = z * perpendicular_C_L_radius) %>%
+    mutate(z_tilt = z * cos(tilt_theta) + x * sin(tilt_theta), # tilt
+           x_tilt = z * -sin(tilt_theta) + x * cos(tilt_theta)) %>%
+    mutate(x = x_tilt,
+           z = z_tilt) %>%
+    select(-x_tilt, -z_tilt) %>%
+    mutate(x_turn = x * cos(H_point * pi/180) - y * sin(H_point * pi/180), # rotate
+           y_turn = x * sin(H_point * pi/180) + y * cos(H_point * pi/180)) %>%
+    mutate(x = x_turn,
+           y = y_turn) %>%
+    select(-x_turn, -y_turn) %>%
+    mutate(x = x + C_point * cos(H_point * pi/180), # move
+           y = y + C_point * sin(H_point * pi/180),
+           z = z + L_point) %>%
+    mutate(H = (atan2(y, x) * 180/pi) %% 360,
+           C = sqrt(x^2 + y^2),
+           L = z) %>%
+    filter(L >= 0 & L <= 100 & C >= 0) %>%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %>%
+    filter(!is.na(color_value)) %>% # check if exists
+    mutate(H_diff = (180 - abs(abs(H - H_point) - 180)) * 
+             sign(180 - abs(H - H_point)) * sign(H - H_point)) %>% # H diff, check if crosses 360
+    filter(abs(H_diff) <= H_bound) %>% # check in H bound
+    filter(!is.na(hcl(H_point - H_diff, C, L, fixup = FALSE))) %>% # symmetric
+    select(!H_diff) %>%
+    sample_n(n_points) %>% # sample down to desired amount
+    mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+             y * cos(-H_point * pi/180),
+           parallel_along_C_L = x * cos(-H_point * pi/180) - 
+             y * sin(-H_point * pi/180)) %>%
+    mutate(row_value = sample(row_number(), n()),
+           col_value = ceiling(row_value / sqrt(n_points))) %>%
+    mutate(row_value = (row_value %% sqrt(n_points)) + 1)
+}
+
+color_points <- get_color_points(250^2, 10,
+                                 H_point, C_point, L_point,
+                                 theta_radius, other_C_L_radius, 
+                                 perpendicular_C_L_radius,
+                                 tilt_theta, H_bound)
+
+```
+
+<hr>
+<center><h2>Compare previous samples</h2></center>
+<hr>
+
+Now we can try this function with the previous values to how it works.
+
+```{r compare_info, message = FALSE, warning = FALSE}
+##-------
+# Compare
+##-------
+H_bound <- 90
+color_points_sphere <- get_color_points(250^2, 10,
+                                        H_point, C_point, L_point,
+                                        theta_radius = radius, 
+                                        other_C_L_radius = radius, 
+                                        perpendicular_C_L_radius = radius,
+                                        tilt_theta = 0, H_bound)
+color_points_ellipse <- get_color_points(250^2, 10,
+                                         H_point, C_point, L_point,
+                                         theta_radius = C_radius, 
+                                         other_C_L_radius = H_radius, 
+                                         perpendicular_C_L_radius = L_radius,
+                                         tilt_theta = 0, H_bound)
+color_points_tilted_ellipse <- get_color_points(250^2, 10,
+                                                H_point, C_point, L_point,
+                                                theta_radius, 
+                                                other_C_L_radius, 
+                                                perpendicular_C_L_radius,
+                                                tilt_theta, H_bound)
+
+p1 <- graph_sample(color_points_sphere)
+p2 <- graph_sample(color_points_ellipse)
+p3 <- graph_sample(color_points_tilted_ellipse)
+p1 + p2 + p3
+```
+```{r compare_info_image, eval = TRUE, echo = FALSE, fig.cap = "Compare: Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/compare_info.png', error = FALSE)
+```
+
+Here, we can see the differences in samples based on the different parameters. By changing the parameters, we can get a variety of color sampling, even when starting with the same base point. The rest of the graphs can be created to compare, but they aren't that interesting since they're just repeats of the previous image.
+
+<hr>
+<center><h2>Trying some other parameters</h2></center>
+<hr>
+
+Now that we have all our functions setup, let's try them out on two more examples. The first one will be on an ellipse that hits the edge.
+
+```{r outside_edge, message = FALSE, warning = FALSE}
+#--------------------
+# Try some other ones
+#--------------------
+
+# Outside Edge ----
+H_point <- 63
+C_point <- 93
+L_point <- 81
+
+color_hex <- hcl(H_point, 
+                 C_point,
+                 L_point,
+                 fixup = FALSE)
+
+C_L_plane <- get_C_L_plane(H_point)
+H_L_curve <- get_H_L_curve(C_point)
+C_tangent_plane <- get_C_tangent_plane(H_point, C_point)
+H_C_plane <- get_H_C_plane(L_point)
+
+theta_radius <- 40
+other_C_L_radius <- 3
+perpendicular_C_L_radius <- 5
+
+tilt_theta <- 0
+H_bound <- 90
+
+color_points <- get_color_points(250^2, 10,
+                                 H_point, C_point, L_point,
+                                 theta_radius, other_C_L_radius, 
+                                 perpendicular_C_L_radius,
+                                 tilt_theta, H_bound)
+```
+
+<details>
+  <summary>[Outside Edge Info Code]</summary>
+```{r outside_edge_info, message = FALSE, warning = FALSE}
+p1 <- graph_info(H_point, C_point, L_point)
+p2 <- graph_sample(color_points)
+p1 + p2
+```
+</details><br>
+```{r outside_edge_info_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: Base Color and Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_info.png', error = FALSE)
+```
+
+The following image shows that the ellipse should go outside the bounds, but there aren't any color values for those points. So, the ellipse is clipped off by that bound. However, the square on the right in the previous image is filled in completely. If we started with a sample of the size we wanted at the end, the clipped points would be missing. The previous image worked because the original set of points was bigger, then clipped, then sampled to the desired amount.
+
+<details>
+  <summary>[C-L Plane Code]</summary>
+```{r outside_edge_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_L_plane(C_L_plane, color_points, color_hex)
+p2 <- graph_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r outside_edge_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_c_l.png', error = FALSE)
+```
+
+The next few images are the same kind that we have seen previously.
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r outside_edge_h_l, message = FALSE, warning = FALSE}
+p1 <- graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+p2 <- graph_H_L(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r outside_edge_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_l.png', error = FALSE)
+```
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r outside_edge_p_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+p2 <- graph_perpendicular_from_C_L(color_points)
+p1 + p2
+ggsave(here::here("output", "color_investigation", ""), 
+       width = 5, height = 1.5)
+```
+</details><br>
+```{r outside_edge_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_p_c_l.png', error = FALSE)
+```
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r outside_edge_h_c, message = FALSE, warning = FALSE}
+p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
+p2 <- graph_x_y(color_points, H_point)
+p1 + p2
+ggsave(here::here("output", "color_investigation", ""), 
+       width = 5, height = 3)
+```
+</details><br>
+```{r outside_edge_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_c.png', error = FALSE)
+```
+
+One important detail to catch in the above image is the point on the top right. This occurs because we check that the image is symmetric across Hue = `H_point`. If we didn't have that check, the right side would stretch up farther to match the boundary of the H-C Plane in the left side.
+
+Finally, we can end this post on one more example. For this one, we'll place the ellipse near the inside of the HCL color space.
+
+```{r inside_edge, message = FALSE, warning = FALSE}
+# Inside Edge ----
+H_point <- 319
+C_point <- 10
+L_point <- 50
+
+color_hex <- hcl(H_point, 
+                 C_point,
+                 L_point,
+                 fixup = FALSE)
+
+C_L_plane <- get_C_L_plane(H_point)
+H_L_curve <- get_H_L_curve(C_point)
+C_tangent_plane <- get_C_tangent_plane(H_point, C_point)
+H_C_plane <- get_H_C_plane(L_point)
+
+theta_radius <- 40
+other_C_L_radius <- 5
+perpendicular_C_L_radius <- 20
+
+tilt_theta <- 90 * pi/180
+H_bound <- 45
+
+color_points <- get_color_points(250^2, 10,
+                                 H_point, C_point, L_point,
+                                 theta_radius, other_C_L_radius, 
+                                 perpendicular_C_L_radius,
+                                 tilt_theta, H_bound)
+```
+
+<details>
+  <summary>[Inside Edge Info Code]</summary>
+```{r inside_edge_info, message = FALSE, warning = FALSE}
+p1 <- graph_info(H_point, C_point, L_point)
+p2 <- graph_sample(color_points)
+p1 + p2
+```
+</details><br>
+```{r inside_edge_info_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: Base Color and Sample Points"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_info.png', error = FALSE)
+```
+
+The H-L Curve is very different from previous ones because of how close to the center the `C_point` is. The makes values close to the center span a larger region of Hue values than compared to points farther away to the outside.
+
+<details>
+  <summary>[C-L Plane Code]</summary>
+```{r inside_edge_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_L_plane(C_L_plane, color_points, color_hex)
+p2 <- graph_C_L(color_points)
+p1 + p2
+```
+</details><br>
+```{r inside_edge_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_c_l.png', error = FALSE)
+```
+
+<details>
+  <summary>[H-L Curve Code]</summary>
+```{r inside_edge_h_l, message = FALSE, warning = FALSE}
+p1 <- graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
+p2 <- graph_H_L(color_points, H_point)
+p1 + p2
+```
+</details><br>
+```{r inside_edge_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_l.png', error = FALSE)
+```
+
+<details>
+  <summary>[C Tangent Plane Code]</summary>
+```{r inside_edge_p_c_l, message = FALSE, warning = FALSE}
+p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
+p2 <- graph_perpendicular_from_C_L(color_points)
+p1 + p2
+ggsave(here::here("output", "color_investigation", ""), 
+       width = 5, height = 1.5)
+```
+</details><br>
+```{r inside_edge_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_p_c_l.png', error = FALSE)
+```
+
+For the final image, we can see that the ellipse is cut up by the `H_bound`. This prevents the ellipse from reaching across the middle.
+
+<details>
+  <summary>[H-C Plane Code]</summary>
+```{r inside_edge_h_c, message = FALSE, warning = FALSE}
+p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
+p2 <- graph_x_y(color_points, H_point)
+p1 + p2
+ggsave(here::here("output", "color_investigation", ""), 
+       width = 5, height = 3)
+```
+</details><br>
+```{r inside_edge_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_c.png', error = FALSE)
+```
+
+<hr>
+
+To continue this work further, there are a few options. This was done using the `tidyverse` with a lot of `mutate` steps but it could easily be done squished together or with matrix multiplication/more efficient techniques. There are also other parameteraizations, such as the two focii for an ellipse. There could also be options for other clipping or not including of the current clipping (like keeping symmetric across `H_point`).

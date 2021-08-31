@@ -1,0 +1,16 @@
+details {
+  background-color: #fdb;
+  cursor: pointer;
+  padding: .5rem 1rem;
+}
+
+summary {
+  border: 2px solid #fdb;
+  margin-top: 0;
+  padding: 1rem;
+}
+
+/* summary */
+summary:marker {
+  color: #85B258;
+}

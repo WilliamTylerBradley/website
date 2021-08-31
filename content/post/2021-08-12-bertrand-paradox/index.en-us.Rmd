@@ -1,0 +1,12 @@
+---
+title: Bertrand Paradox
+author: Tyler
+date: '2021-08-12'
+slug: index.en-us
+categories: []
+tags: []
+keywords:
+  - tech
+---
+
+<!--more-->
