@@ -11,7 +11,6 @@ thumbnailImagePosition: "bottom"
 <script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
 
 
-<p>Flip xyl - hcl order.</p>
 <p>This blog post follows up from the previous one. Code in that post finds colors in the HCL color space by sampling points from a sphere centered on a base point. There’s a mismatch between how the sphere is determined (Cartesian coordinates of x, y, L) and the colors are specified (polar coordinates of H, C, L) so a conversion happens in the code.</p>
 <p>This post looks into what happens if you just start with a “sphere” based on Hue, Chroma, Luminance values. So we’ll set up shapes that expand out from the base point along Hue, Chroma, and Luminance directly.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
 <hr>
@@ -265,7 +264,7 @@ Base Color: Plane Perpendicular to C-L Plane
 </div>
 </div>
 </div>
-<p>After the base color is set, we can look at what happens if you extend out to a sphere.</p>
+<p>After the base color is understood, we can look at what happens if you extend out to a sphere.</p>
 <hr>
 <center>
 <h2>
@@ -273,6 +272,7 @@ xyL Perimeter
 </h2>
 </center>
 <hr>
+<p>For this code, we’ll only pull points on the perimeter, unlike the previous post that had points at random in the sphere. For the first main section, we’ll look at moving away from the base point using Cartesian coordinate of x, y, and L. This is exactly what we did in the last post, so it should look familiar. The main new addition is cutting the shape into pieces and graphing them on facets.</p>
 <details>
 <summary>
 [xyL Perimeter Code]
@@ -301,8 +301,10 @@ get_xyl_data &lt;- function(H_point, C_point, L_point, width, n_color) {
                              l = L)) %&gt;%
     mutate(x = C * cos(H * pi/180),
            y = C * sin(H * pi/180)) %&gt;%
-    mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + y * cos(-H_point * pi/180),
-           parallel_along_C_L = x * cos(-H_point * pi/180) - y * sin(-H_point * pi/180)) %&gt;%
+    mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+             y * cos(-H_point * pi/180),
+           parallel_along_C_L = x * cos(-H_point * pi/180) - 
+             y * sin(-H_point * pi/180)) %&gt;%
     mutate(row_value = sample(row_number(), n()),
            col_value = ceiling(row_value / sqrt(n_color))) %&gt;%
     mutate(row_value = (row_value %% sqrt(n_color)) + 1) %&gt;%
@@ -499,7 +501,8 @@ graph_H_L_by_C &lt;- function(color_points, H_point) {
 }
 
 get_H_L_curve_by_C &lt;- function(color_points) {
-  map_dfr(as.numeric(as.character(unique(color_points$C_cut))), get_H_L_curve) %&gt;%
+  map_dfr(as.numeric(as.character(
+    unique(color_points$C_cut))), get_H_L_curve) %&gt;%
     mutate(C_cut = as.factor(C))
 }
 H_L_curve_by_C &lt;- get_H_L_curve_by_C(xyl)
@@ -628,85 +631,90 @@ graph_parallel_L_by_perpendicular(xyl)</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_info.png" alt="xyl Info" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_info.png" alt="xyL Info" style="display:block; margin:auto;" />
 <p class="caption">
-xyl Info
+xyL Info
 </p>
 </div>
+<p>Above, we see the basic information about the base color and the points sampled around the perimeter of the sphere (width is 15 units). Below, we see the sphere cut up by C-L Planes at different Hue values. We see that has we move across different values for our Hue, we slice through the sphere to get different shapes. On the right image, the ends are moved left slightly and the doughnuts in the middle values tend to have a little more width on the right side. That occurs because our cuts are fanning across the sphere at an angle, not moving along in a straight line. So, one side gets a little more of the perimeter to plot.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l_plane.png" alt="xyl C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l_plane.png" alt="xyL C-L Plane by H cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl C-L Plane
+xyL C-L Plane by H cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l.png" alt="xyl C-L" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l.png" alt="xyL C-L by H cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl C-L
+xyL C-L by H cuts
 </p>
 </div>
 </div>
 </div>
+<p>The next set shows the H-L Curve by different Chroma values. Here, we might expect to see circles but instead we get ovals. This occurs because the circle made by moving Hue through the sphere cuts along a curve that is then flattened for these facets. Also, technically the facets are little off because the width of the graph should be increasing as Chroma increases. Even though they show the same Hue values, the arc length of the circle should be getting longer so the graphs should be getting wider.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l_curve.png" alt="xyl H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l_curve.png" alt="xyL H-L Curve by C cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl H-L Curve
+xyL H-L Curve by C cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l.png" alt="xyl H-L" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l.png" alt="xyL H-L by C cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl H-L
+xyL H-L by C cuts
 </p>
 </div>
 </div>
 </div>
+<p>In the next set, we finally get our nice circles. As we slice through our sphere for different Luminance values, we get our circles in the H-C Planes.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c_plane.png" alt="xyl H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c_plane.png" alt="xyL H-C Plane by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl H-C Plane
+xyL H-C Plane by L cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c.png" alt="xyl H-C" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c.png" alt="xyL H-C by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl H-C
+xyL H-C by L cuts
 </p>
 </div>
 </div>
 </div>
+<p>The next three images also have circles because we’re cutting our sphere along straight lines equal distances from each other. The first facet set looks at the sphere from up above as we cut through different Lumanince values. This image is the same image as the right side in the previous set, but each sub-image is rotated so the Hue angle is seen moving flat left to right. The x-axis is the distance along the C-L Plane that cuts the sphere in half. This isn’t equivalent to Chroma because that moves at an angle determined by Hue, but is related. The values are the Chroma values on the main C-L Plane moving in a straight line to the C-L Plane. The y-axis is the distance from the C-L Plane in either direction.</p>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_per.png" alt="xyl xyl_par_per" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_per.png" alt="xyL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl xyl_par_per
+xyL Parallel-Perpendicular Distances by L cuts
 </p>
 </div>
+<p>The next two images both have the Luminance values along the y-axis, but cut the sphere differently. The left side slices the sphere moving out from the center of the HCL color space, along the Chroma values. Here we see the nice circles instead of ovals for the images of the H-L cut by C. The right side cuts are made parallel to the C-L Plane and move along a straight line. We’re also getting circles that aren’t a little lop-sided, unlike the C-L cut by H ones.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_per_l.png" alt="xyl xyl_per_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_per_l.png" alt="xyL Perpendicular Distance-L by Parallel Distance cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl xyl_per_l
+xyL Perpendicular Distance-L by Parallel Distance cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_l.png" alt="xyl xyl_par_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_l.png" alt="xyL Parallel Distance-L by Perpendicular Distance cuts" style="display:block; margin:auto;" />
 <p class="caption">
-xyl xyl_par_l
+xyL Parallel Distance-L by Perpendicular Distance cuts
 </p>
 </div>
 </div>
@@ -718,7 +726,7 @@ HCL Perimeter
 </h2>
 </center>
 <hr>
-<p>For this code, we’ll only pull points on the perimeter, unlike the previous post that had points at random in the sphere. For the first section, we’ll move away from the base point along Hue, Chroma, and Luminance. This means curving around when changing Hue values. The code also groups points based on cuts in the perimeter.</p>
+<p>For the second main section, we’ll move away from the base point along Hue, Chroma, and Luminance. This means curving around when changing Hue values.</p>
 <details>
 <summary>
 [HCL Perimeter Code]
@@ -873,95 +881,97 @@ graph_perpendicular_L_by_parallel(hcl)
 
 graph_parallel_L_by_perpendicular(hcl)</code></pre>
 </details>
-<p><br></p>
-This first set of graphs plots the C-L plane split by Hue values, both the perimeter and where it fits in the color space. We see these nice circles as the perimeter is cut moving along Hue values.
+<br>
 <div class="figure">
 <img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_info.png" alt="HCL Info" style="display:block; margin:auto;" />
 <p class="caption">
 HCL Info
 </p>
 </div>
+<p>This first set of graphs plots the C-L plane split by Hue values, both the perimeter and where it fits in the color space. We see these nice circles as the perimeter is cut moving along Hue values.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l_plane.png" alt="HCL C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l_plane.png" alt="HCL C-L Plane by H cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL C-L Plane
+HCL C-L Plane by H cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l.png" alt="HCL C-L" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l.png" alt="HCL C-L by H cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL C-L
+HCL C-L by H cuts
 </p>
 </div>
 </div>
 </div>
-<p>The next set shows H-L Curve split by different Chroma values. Technically, the image on the right should have wider graphs as the Chroma values increases because the size of the circle is increasing, but I’m not sure how to do that with <code>ggplot2</code>.</p>
+<p>The next set shows H-L Curve split by different Chroma values. We’re also getting nice circles unlike the xyL section.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l_curve.png" alt="HCL H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l_curve.png" alt="HCL H-L Curve by C cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL H-L Curve
+HCL H-L Curve by C cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l.png" alt="HCL H-L" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l.png" alt="HCL H-L by C cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL H-L
+HCL H-L by C cuts
 </p>
 </div>
 </div>
 </div>
-<p>The next graph breaks the trend of nice circles. Here we see tear drop shapes instead. The next images pull this apart a little more.</p>
+<p>The next graph breaks the trend of nice circles. Here we see tear drop shapes instead. The next few images pull this apart a little more.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c_plane.png" alt="HCL H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c_plane.png" alt="HCL H-C Plane by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL H-C Plane
+HCL H-C Plane by L cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c.png" alt="HCL H-C" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c.png" alt="HCL H-C by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL H-C
+HCL H-C by L cuts
 </p>
 </div>
 </div>
 </div>
+<p>Here we see the tear-drop shapes in more detail. Because we created our “sphere” along the polar coordinates, it doesn’t turn out like we might expect. This shape’s height is a function of what a sphere should be but augmented by the distance between Hue values increasing when Chroma increases. Notice that center Chroma values is at 26. Not in the middle of the circular part, like at 30-ish.</p>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.png" alt="HCL hcl_par_per" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.png" alt="HCL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL hcl_par_per
+HCL Parallel-Perpendicular Distances by L cuts
 </p>
 </div>
-<p>Notice that C_point is at 26. Not in the middle of the circle part, like at 30</p>
+<p>We also get a squished version for the image on the left and a version with few cuts because the shape doesn’t reach out as after for the image on the right.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_per_l.png" alt="HCL hcl_per_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_per_l.png" alt="HCL Perpendicular Distance-L by Parallel Distance cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL hcl_per_l
+HCL Perpendicular Distance-L by Parallel Distance cuts
 </p>
 </div>
 </div>
 <div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_l.png" alt="HCL hcl_par_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_l.png" alt="HCL Parallel Distance-L by Perpendicular Distance cuts" style="display:block; margin:auto;" />
 <p class="caption">
-HCL hcl_par_l
+HCL Parallel Distance-L by Perpendicular Distance cuts
 </p>
 </div>
 </div>
 </div>
+<p>This is a little unwieldy to compare the different main sections apart, so in the next one we’ll add them together.</p>
 <hr>
 <center>
 <h2>
@@ -969,6 +979,7 @@ Compare Perimeters
 </h2>
 </center>
 <hr>
+<p>For the following images, the two sets we previously created are stuck together and then graphed. This will highlight the differences well.</p>
 <details>
 <summary>
 [Compare Code]
@@ -1126,56 +1137,81 @@ ggplot(data = compare,
   theme_void() +
   facet_grid(~setting)</code></pre>
 </details>
-<br>
+<p>In the first image we see the lop-sidedness of the xyL points with the circles of the HCL ones. Also, we can easily see that the XYL points stretch out to farther Hue values. Then we have the ovals for xyL and circles for HCL.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_c_l.png" alt="compare_c_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_c_l.png" alt="Comparison C-L by L cuts " style="display:block; margin:auto;" />
 <p class="caption">
-compare_c_l
+Comparison C-L by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_l.png" alt="compare_h_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_l.png" alt="Comparison H-L by C cuts" style="display:block; margin:auto;" />
 <p class="caption">
-compare_h_l
+Comparison H-L by C cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_c.png" alt="compare_h_c" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_c.png" alt="Comparison H-C by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-compare_h_c
+Comparison H-C by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_per.png" alt="compare_par_per" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_per.png" alt="Comparison Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-compare_par_per
+Comparison Parallel-Perpendicular by L cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_per_l.png" alt="compare_per_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_per_l.png" alt="Comparison Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
 <p class="caption">
-compare_per_l
+Comparison Perpendicular-L by Parallel cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_l.png" alt="compare_par_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_l.png" alt="Comparison Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
 <p class="caption">
-compare_par_l
+Comparison Parallel-L by Perpendicular cuts
 </p>
 </div>
+</div>
+</div>
+<p>So let’s just compare the samples directly.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples.png" alt="compare_samples" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples.png" alt="Comparison Samples H by L" style="display:block; margin:auto;" />
 <p class="caption">
-compare_samples
+Comparison Samples H by L
 </p>
 </div>
-<p>I think at this point in the post I’m supposed to say one is better than the other, but I think they’re just different. So let’s just compare the samples.</p>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples2.png" alt="compare_samples2" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples2.png" alt="Comparison Samples H by C" style="display:block; margin:auto;" />
 <p class="caption">
-compare_samples2
+Comparison Samples H by C
 </p>
 </div>
+</div>
+</div>
+<p>I think at this point in the post I’m supposed to say one is better than the other, but I think they’re just different. It really depends on what you’re looking for in selecting colors.</p>
 <hr>
 <center>
 <h2>
@@ -1183,6 +1219,7 @@ Lower Chroma Value
 </h2>
 </center>
 <hr>
+<p>Set Chroma = 16, everything else is the same.</p>
 <details>
 <summary>
 [Lower Chroma Value Code]
@@ -1260,54 +1297,78 @@ ggplot(data = compare,
   theme_void() +
   facet_grid(~setting)</code></pre>
 </details>
-<br>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_c_l.png" alt="C_lower_c_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_c_l.png" alt="Lower C C-L by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_c_l
+Lower C C-L by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_l.png" alt="C_lower_h_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_l.png" alt="Lower C H-L by C cuts " style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_h_l
+Lower C H-L by C cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_c.png" alt="C_lower_h_c" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_c.png" alt="Lower C H-C by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_h_c
+Lower C H-C by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_per.png" alt="C_lower_par_per" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_per.png" alt="Lower C Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_par_per
+Lower C Parallel-Perpendicular by L cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_per_l.png" alt="C_lower_per_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_per_l.png" alt="Lower C Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_per_l
+Lower C Perpendicular-L by Parallel cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_l.png" alt="C_lower_par_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_l.png" alt="Lower C Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_par_l
+Lower C Parallel-L by Perpendicular cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples.png" alt="C_lower_samples" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples.png" alt="Lower C Samples H by L" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_samples
+Lower C Samples H by L
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples2.png" alt="C_lower_samples2" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples2.png" alt="Lower C Samples H by C" style="display:block; margin:auto;" />
 <p class="caption">
-C_lower_samples2
+Lower C Samples H by C
 </p>
+</div>
+</div>
 </div>
 <hr>
 <center>
@@ -1316,6 +1377,7 @@ Higher Chroma Value
 </h2>
 </center>
 <hr>
+<p>Set Chroma = 75.</p>
 <details>
 <summary>
 [Higher Chroma Value Code]
@@ -1409,54 +1471,78 @@ ggplot(data = compare,
 ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_samples2.png&quot;), 
        width = 5, height = 2.5)</code></pre>
 </details>
-<br>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_c_l.png" alt="C_higher_c_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_c_l.png" alt="Higher C C-L by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_c_l
+Higher C C-L by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_l.png" alt="C_higher_h_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_l.png" alt="Higher C H-L by C cuts " style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_h_l
+Higher C H-L by C cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_c.png" alt="C_higher_h_c" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_c.png" alt="Higher C H-C by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_h_c
+Higher C H-C by L cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_per.png" alt="C_higher_par_per" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_per.png" alt="Higher C Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_par_per
+Higher C Parallel-Perpendicular by L cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_per_l.png" alt="C_higher_per_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_per_l.png" alt="Higher C Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_per_l
+Higher C Perpendicular-L by Parallel cuts
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_l.png" alt="C_higher_par_l" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_l.png" alt="Higher C Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_par_l
+Higher C Parallel-L by Perpendicular cuts
 </p>
 </div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples.png" alt="C_higher_samples" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples.png" alt="Higher C Samples H by L" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_samples
+Higher C Samples H by L
 </p>
 </div>
+</div>
+<div>
 <div class="figure">
-<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples2.png" alt="C_higher_samples2" style="display:block; margin:auto;" />
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples2.png" alt="Higher C Samples H by C" style="display:block; margin:auto;" />
 <p class="caption">
-C_higher_samples2
+Higher C Samples H by C
 </p>
+</div>
+</div>
 </div>
 <div class="footnotes">
 <hr />
