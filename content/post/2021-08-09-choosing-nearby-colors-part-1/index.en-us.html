@@ -3,7 +3,7 @@ title: Choosing Nearby Colors Part 1
 author: Tyler
 date: '2021-08-09'
 slug: index.en-us
-summary: Attempting to select colors close to a chosen one.
+summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space.
 thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png
 thumbnailImagePosition: "right"
 ---
@@ -11,8 +11,7 @@ thumbnailImagePosition: "right"
 <script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
 
 
-<p>Need to update pics to have title casing. Update ellipse radius notes. Specify base point</p>
-<p>This blogpost talks about selecting colors nearby to a chosen one. Selecting colors like this is needed for a generative art project I’m programming. For some background, I’m using the HCL color space. I’m not going to go into a lot of details on HCL for this post. You only need to HCL specifies unique colors by <strong>H</strong>ue, <strong>C</strong>hroma, and <strong>L</strong>uminance and these follow polar coordinates. Hue determines the type of color (like red, blue, green) and is specified by degrees around a circle. Chroma determines how much color is involved, ranging from gray to deep colors, and is the radius. Luminance is the brightness and ranges from 0 for black and 100 for white along the z-axis. Playing around hclwizard color picker <a href="http://hclwizard.org:3000/hclcolorpicker/" target="_blank">(here)</a> will help your understanding of how the parameters work. Lastly, this color space was chosen because it is perceptually uniform, so moving one unit distance in any direction gives colors that look about the same difference. More details can be found <a href="https://en.wikipedia.org/wiki/HCL_color_space" target="_blank">here</a> and <a href="https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_.28CIELCH.29" target="_blank">here</a>.</p>
+<p>This blog post talks about selecting colors nearby to a chosen one. This color selection process is needed for a generative art project I’m programming. For some background, I’m using the HCL color space. I’m not going to go into a lot of details on HCL for this post. You only need to HCL specifies unique colors by <strong>H</strong>ue, <strong>C</strong>hroma, and <strong>L</strong>uminance using polar coordinates. Hue, degrees around the circle, determines the location on the color wheel (like red, blue, green). Chroma, the distance from the circle’s center, specifies how much color is involved ranging from gray in the center to intense shades at the edges. Luminance is the brightness and ranges from 0 for black and 100 for white along the z-axis. Playing around hclwizard color picker <a href="http://hclwizard.org:3000/hclcolorpicker/" target="_blank">(here)</a> will help your understanding of how the parameters work. Lastly, this color space is perceptually uniform, so moving one unit distance in any direction gives colors that look about the same difference. More details can be found <a href="https://en.wikipedia.org/wiki/HCL_color_space" target="_blank">here</a> and <a href="https://en.wikipedia.org/wiki/CIELUV#Cylindrical_representation_.28CIELCH.29" target="_blank">here</a>.</p>
 <hr>
 <center>
 <h2>
@@ -27,7 +26,7 @@ Now for the R code
 library(tidyverse)
 library(patchwork)
 library(colorspace)</code></pre>
-<p>We’ll set up some code to get a green color based on H, C, and L. We’ll also create a data set called <code>color_points</code>. This will only have one observation for right now, but we will add in more rows later. It’ll serve has a place holder for functions graphs different shapes.</p>
+<p>We’ll set up some code to get a green base color based on H, C, and L. We’ll also create a data set called <code>color_points</code>. This will only have one observation for right now, but we will add in more rows later. It’ll serve as a placeholder for functions that graph different shapes.</p>
 <pre class="r"><code>##------------
 # Pick a color
 ##------------
@@ -51,8 +50,8 @@ color_points &lt;- data.frame(x = C_point * cos(H_point * pi/180),
                            parallel_along_C_L = 0,
                            row_value = 0,
                            col_value = 0)</code></pre>
-<p>Let’s see where this color exists in the HCL color space and create some helper functions.</p>
-<p>We’ll start out with looking at the Chroma-Luminance plane (C-L Plane). We want to graph slicing the HCL color space in half from the top to the bottom along the line H = 112. (<code>H_point</code> = 112)</p>
+<p>Let’s see where this base color exists in the HCL color space and create some helper functions.</p>
+<p>We’ll start with looking at the Chroma-Luminance plane (C-L Plane). We want to graph slicing the HCL color space in half from top to bottom along the line H = 112. (<code>H_point</code> = 112)</p>
 <pre class="r"><code>##--------------------------------
 # See color in H, C, L color space 
 ##--------------------------------
@@ -90,8 +89,8 @@ graph_C_L_plane(C_L_plane, color_points, color_hex)</code></pre>
 Specific Color: C-L Plane
 </p>
 </div>
-<p>We can see as the Luminance increases, the shades move from darker to lighter and as Chroma moves out from 0, the color is more intense. The <code>get_C_L_plane</code> function returns a data set with points on that plane. For this blog post, functions that start with “get” return points on something we’re going to graph while functions that start with “graph” display them appropriately. This plane extends over to the left where the H value would be the current H + 180. I’m not graphing that because this project will keep values close to the original and that changes the Hue too much.</p>
-<p>From here down, I’ll hide some of the code that’s similar to previous sections to shorten the post. You can click on <span style="color: #C29CB7 ">[texts]</span> for showing code if you want to see it.</p>
+<p>We can see as the Luminance increases, the shades move from darker to lighter, and as Chroma moves out from 0, the color is more intense. The <code>get_C_L_plane</code> function returns a data set with points on that plane. For this blog post, functions that start with “get” return points we’re going to graph while functions that start with “graph” display them appropriately. This plane actually extends to the left, where the H value would be the current H + 180. I’m not graphing that section because this project will keep values close to the base color without changing the Hue too much.</p>
+<p>From here down, I’ll hide some of the code similar to previous sections to shorten the post. You can click on <span style="color: #C29CB7 ">[texts]</span> to show code if you want to see it.</p>
 <p>Next, we can see the color falls with all the other colors for the same Chroma value. I think about Chroma values as tree rings. So, this image takes the HCL color space, drills out the center for lower Chroma values, then has you stand in the middle facing the Hue value, pulling the shape away from behind you and laying it flat.</p>
 <details>
 <summary>
@@ -141,7 +140,7 @@ graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)</code></pre>
 Specific Color: H-L Curve
 </p>
 </div>
-<p>You can see the odd shape of the HCL color space where the different Hues don’t stretch their Chroma values out at different Luminance values. This is the only graph that shows a flatten curve. Everything else displays a sharp slice. For all the H-L curve graphs, the Hue value has be rotated to be the center.</p>
+<p>You can see the odd shape of the HCL color space where the different Hues don’t stretch their Chroma values out at different Luminance values. This is the only graph that shows a flattened curve. Everything else displays a sharp slice. For all the H-L curve graphs, the Hue value is rotated to the center.</p>
 <p>Now we can look at cutting horizontally through the HCL color space where L = 68. (<code>L_point</code> = 68)</p>
 <details>
 <summary>
@@ -191,7 +190,7 @@ Specific Color: H-C Plane
 </p>
 </div>
 <p>We can see the different colors as Hue moves around a circle and their increased intensity as Chroma moves out to the edges. The shape is not circular because the HCL color space isn’t.</p>
-<p>There is one more graph to see. We looked at cutting the HCL color space along the Hue, Chroma, and Lumanince values, but the Chroma image was a fallen curve. Instead, we can cut a place at the Chroma value but tangent to the circle constant Chroma values create. The next image sets up the explanation, then we’ll see the actual plane.</p>
+<p>There is one more graph to see. We looked at cutting the HCL color space along the Hue, Chroma, and Luminance values, but the Chroma image was a flattened curve. So instead, we can cut a plane at the Chroma value but tangent to the circle a constant Chroma value creates. The following image sets up the explanation, and then we’ll see the actual plane.</p>
 <details>
 <summary>
 [C Tangent Plane Setup Code]
@@ -246,7 +245,7 @@ ggplot(data = H_C_plane,
 C Tangent Plane setup
 </p>
 </div>
-<p>Chroma and Luminance move in straight lines but Hue is circular. We can see this in the image with the white circle where Chroma and Luminance are constant but Hue moves all the way around the circle. This means looking at images of shapes can be distorted when graphing them flat. So we might want to see what happens as we move away from our specific color in a straight line perpendicular to the C-L Plane. That’s the black line. We’re going to cut the HCL space from top to bottom along this line.</p>
+<p>Chroma and Luminance move in straight lines, but Hue is circular. The image shows this with the white circle where Chroma and Luminance are constant, but Hue moves around the circle. This means looking at graphs of shapes can be distorted when graphing them flat. So we might want to see what happens as we move away from our specific color in a straight line perpendicular to the C-L Plane. That’s the black line. We’re going to cut the HCL space from top to bottom along this line.</p>
 <details>
 <summary>
 [C Tangent Plane Code]
@@ -279,7 +278,7 @@ graph_C_tangent_plane &lt;- function(C_tangent_plane, color_points, color_hex) {
                    color = &quot;white&quot;, fill = &quot;white&quot;)) +
     scale_color_identity() +
     scale_fill_identity() +
-    scale_x_reverse(&quot;Distance perpendicular to C-L plane&quot;,
+    scale_x_reverse(&quot;Distance Perpendicular to C-L Plane&quot;,
                     labels = abs) +
     geom_point(aes(x = 0,
                    y = L_point),
@@ -298,7 +297,7 @@ graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)</code></pre>
 Specific Color: Plane Perpendicular to C-L Plane
 </p>
 </div>
-<p>This show the plane perpendicular to the C-L Plane at C = 60. A horizontal line drawn at the point on this image matches where the black intersects the H-C plane in the previous graph. This image isn’t super helpful here, but it can be when we check shapes later.</p>
+<p>This shows the plane perpendicular to the C-L Plane at C = 60. A horizontal line drawn at the point on this image matches where the black intersects the H-C plane in the previous graph. This image isn’t super helpful here, but it will be when we check shapes later.</p>
 <hr>
 <center>
 <h2>
@@ -306,8 +305,8 @@ Nearby points in a sphere
 </h2>
 </center>
 <hr>
-<p>Let’s start out with drawing random points inside a sphere with width of 5 centered on our chosen color.</p>
-<p>The code below draws random points in a unit sphere, stretches it to be the right size, then moves it to our color. After that, the code converts it to HCL coordinates, converts these to a color, then creates some nice variables that will be used for plotting later.</p>
+<p>Let’s start with drawing random points inside a sphere with a width of 5 centered on our base color.</p>
+<p>The code below draws random points in a unit sphere, stretches it to be the right size, then moves it to our base color. After that, the code converts it to HCL coordinates, converts these to a color, then creates some nice variables to use for plotting later.</p>
 <pre class="r"><code>##------
 # Sphere
 ##------
@@ -340,7 +339,7 @@ color_points &lt;- data.frame(x = rnorm(n = n_points),
   mutate(row_value = sample(row_number(), n()),
          col_value = ceiling(row_value / sqrt(n_points))) %&gt;%
   mutate(row_value = (row_value %% sqrt(n_points)) + 1)</code></pre>
-<p>Here we see the values, base color, and the sample points.</p>
+<p>Here we see the values, base color, and sample points.</p>
 <details>
 <summary>
 [Sphere Info Code]
@@ -387,7 +386,7 @@ p1 + p2</code></pre>
 Sphere: Base Color and Sample Points
 </p>
 </div>
-<p>We can reuse the previous functions to graph the planes with our sphere in white to get the outline shape by using the new points as the color_points parameter. Then we can just graph the new points to see how they look. In the next image, the left side has the previous C-L Plane image with points from the sphere blocked out in white. The right side has those same points with the correct color.</p>
+<p>We can reuse the previous functions to graph the planes with our sphere in white to get the outline shape by using the new points as the <code>color_points</code> parameter. Then we can just graph the new points to see how they look. For example, in the following image, the left side has the previous C-L Plane image with points from the sphere blocked out in white. However, the right side has those same points with the correct color.</p>
 <details>
 <summary>
 [C-L Plane Code]
@@ -414,7 +413,7 @@ p1 + p2</code></pre>
 Sphere: C-L Plane
 </p>
 </div>
-<p>Now, we can continue with the others starting with the H-L Curve. It’s hard to tell in this image, but the shape isn’t a perfect circle. It’s slightly off because the Hue values curve through the sphere, then that intersection is flattened in the graph. This is more obvious for different values.</p>
+<p>Now, we can continue with the others, starting with the H-L Curve. It’s hard to tell in this image, but the shape isn’t a perfect circle. It’s slightly off because the Hue values curve through the sphere, then that intersection is flattened in the graph. This distortion is more evident for different values.</p>
 <details>
 <summary>
 [H-L Curve Code]
@@ -524,7 +523,7 @@ Nearby points in an ellipse
 </h2>
 </center>
 <hr>
-<p>The following code starts and ends with the same lines as the previous code for points in a sphere. There’s are just two changes: stretching the sphere based on different amounts and rotating the points so the axes line up correctly. The <code>radius</code> parameter has been broken into three: <code>H_radius</code>, <code>C_radius</code>, and <code>L_radius</code>. The <code>C_radius</code> and <code>L_radius</code> stretch the sphere along those directions from the point. The <code>H_radius</code> is a little misnomer because it’s stretching perpendicular to the C-L Plane, which is similar to how Hue changes but doesn’t exactly match the curve.</p>
+<p>The following code starts and ends with the same lines as the previous code for points in a sphere. There’s are just two changes: stretching the sphere based on different amounts and rotating the points to line up the axes correctly. The <code>radius</code> parameter gets broken into three: <code>H_radius</code>, <code>C_radius</code>, and <code>L_radius.</code> The <code>C_radius</code> and <code>L_radius</code> stretch the sphere along those directions from the point. The <code>H_radius</code> is a slight misnomer because it’s stretching perpendicular to the C-L Plane, which is similar to how Hue changes but doesn’t exactly match the curve.</p>
 <pre class="r"><code>##-------
 # Ellipse
 ##-------
@@ -581,7 +580,7 @@ p1 + p2</code></pre>
 Ellipse: Base Color and Sample Points
 </p>
 </div>
-<p>In this section’s images, we can see how the sphere was stretched. If you’re standing in the center of the HCL color space and face the point, the sphere was stretched to your left and right by the <code>H_radius</code> amount, to and away from you by <code>C_radius</code>, and vertically by <code>L_radius</code>.</p>
+<p>In this section’s images, we can see how the sphere gets stretched. If you’re standing in the center of the HCL color space and face the point, the sphere was extended to your left and right by the <code>H_radius</code> amount, to and away from you by <code>C_radius</code>, and vertically by <code>L_radius.</code></p>
 <details>
 <summary>
 [C-L Plane Code]
@@ -597,7 +596,7 @@ p1 + p2</code></pre>
 Ellipse: C-L Plane
 </p>
 </div>
-<p>In the previous image, we can see the ellipse is <code>2 * L_radius</code> tall and <code>2 * C_radius</code> wide. In the next image, the ellipse is also <code>2 * L_radius</code> tall. It changed horizontally but not by <code>2 * H_radius</code>. This image displays the <code>C_point</code> radius circles as H changes through the HCL color space so the distance of stretching is a function of the arc length of those circles. The next images has the width of <code>2 * H_radius</code>.</p>
+<p>In the previous image, we can see the ellipse is <code>2 * L_radius</code> tall and <code>2 * C_radius</code> wide. In the following image, the ellipse is also <code>2 * L_radius</code> tall. It changed horizontally but not by <code>2 * H_radius</code>. This image displays the <code>C_point</code> radius circles as H changes through the HCL color space, so the distance of stretching is a function of the arc length of those circles. The next image has a width of <code>2 * H_radius</code>.</p>
 <details>
 <summary>
 [H-L Curve Code]
@@ -628,7 +627,7 @@ p1 + p2</code></pre>
 Ellipse: Plane Perpendicular to C-L Plane
 </p>
 </div>
-<p>Finally, we see the H-C plane with an ellipse that has one axis <code>2 * C_radius</code> long and the other of <code>2 * H_radius</code>. It’s pointing to the center so which axis appears as height and width would change as H turns.</p>
+<p>Finally, we see the H-C plane with an ellipse with one axis <code>2 * C_radius</code> long and the other of <code>2 * H_radius</code>. It’s pointing to the center, so which axis appears as height and width would change as H turns.</p>
 <details>
 <summary>
 [H-C Plane Code]
@@ -652,9 +651,9 @@ Nearby points in a tilted ellipse
 </h2>
 </center>
 <hr>
-<p>For this project, I’m focusing on the Hue value so we’ll always tilt along the C-L Plane. This means points with Hue = <code>H_point</code> will keep the same Hue as we tilt the top and bottom either closer to or farther away from the center. Other points will change their Hue because they’ll move parallel to the C-L Plane but Hue values are at an angle to this plane. As we tilt we’ll change the Chroma and Luminance values for all points except at the original point.</p>
-<p>The following code is the same as the previous one but with the addition of tilting the ellipse by <code>tilt_theta</code>. There’s a new parameter for the degree of tilt, <code>tilt_theta</code>. The radius parameters have changed to map to the axis that is tilted, <code>theta_radius</code>, the other radius on the C-L Plane, <code>other_C_L_radius</code>, and the one perpendicular to the other two, <code>perpendicular_C_L_radius</code> (which fixes the <code>H_radius</code> misnomer).</p>
-<p>There is also a little code that finds the <code>tilt_theta</code> that points the ellipse towards the farthest point on the C-L Plane. This helps stretch the ellipse without hitting an edge (but any theta can be used).</p>
+<p>I’m focusing on the Hue value for this project, so we’ll always tilt along the C-L Plane. Points with Hue = <code>H_point</code> will keep the same Hue as we rock the top and bottom either closer or farther from the center. Other points will change their Hue because they’ll move parallel to the C-L Plane and Hue is at an angle to this plane. We’ll change the Chroma and Luminance values for all points except the base color as we tilt.</p>
+<p>The following code is the same as the previous one but adds tilting the ellipse by <code>tilt_theta</code>, the new parameter for the degree of tilt. In addition, the radius parameters have changed to map to the axis that is tilted, <code>theta_radius</code>, the other radius on the C-L Plane, <code>other_C_L_radius</code>, and the one perpendicular to the other two, <code>perpendicular_C_L_radius</code> (which fixes the <code>H_radius</code> misnomer).</p>
+<p>A little code also finds the <code>tilt_theta</code> that points the ellipse towards the farthest point on the C-L Plane. This helps stretch the ellipse without hitting an edge (but any theta can be used).</p>
 <pre class="r"><code>##--------------
 # Tilted Ellipse
 ##--------------
@@ -737,7 +736,7 @@ p1 + p2</code></pre>
 Tilted Ellipse: C-L Plane
 </p>
 </div>
-<p>In the next image, the right side isn’t quite symmetric across a horizontal line in the middle. The top is a little thinner than the bottom so it’s more of an egg shape. That happens because the H values curve through the ellipse then are flatten into this image. Since different H values are reached for different C values and in this shape C and L are correlated. So in this image, as L changes, C is also changes, which affects which H values are reached by the edges. This graph won’t always result in an egg shape, but it does in this case.</p>
+<p>The right side isn’t quite symmetric across a horizontal line in the middle in the following image. The top is a little thinner than the bottom, so it’s more of an egg shape. That happens because the H values curve through the ellipse and flatten into this image. Different H values are obtained for different C values, and C and L are correlated in this shape. So in this image, as L changes, C also changes, which affects the H values reached by the edges. This graph won’t always result in an egg shape, but it does in this case.</p>
 <details>
 <summary>
 [H-L Curve Code]
@@ -753,7 +752,7 @@ p1 + p2</code></pre>
 Tilted Ellipse: H-L Curve
 </p>
 </div>
-<p>The next time is symmetric across a horizontal line in the middle. Checking this feature is one of the main reasons for this graph.</p>
+<p>The next one is symmetric across a horizontal line in the middle. Checking this feature is one of the main reasons for this graph.</p>
 <details>
 <summary>
 [C Tangent Plane Code]
@@ -769,7 +768,7 @@ p1 + p2</code></pre>
 Tilted Ellipse: Plane Perpendicular to C-L Plane
 </p>
 </div>
-<p>Finally, the H-C Plane is shown. The length along the C line would be a function of the radii and tilt amount, but the perpendicular length is just <code>perpendicular_C_L_radius</code>.</p>
+<p>Finally, we see the H-C Plane. The length along the C-L Plane line is a function of the radii and tilt amount, but the perpendicular length is just <code>perpendicular_C_L_radius</code>.</p>
 <details>
 <summary>
 [H-C Plane Code]
@@ -793,9 +792,9 @@ Clean up the final function
 </h2>
 </center>
 <hr>
-<p>There’s a couple of ways to get points that don’t have actual values, such as outside the shape or Luminance values outside of [0, 100]. To handle this, we’ll add in a feature that over samples points, only keeps the ones that have a color, then samples down to the desired amount. The new <code>oversample</code> parameter adds in the extra points. This could be down in a while loop, but this is fast enough and normally works.</p>
-<p>We might also want to limit the Hue values. For example, if we want to keep in the red region without going to purple or orange, this will prevent that even if our <code>perpendicular_C_L_radius</code> is too large. We’ll just crop any points out that go past those bounds.</p>
-<p>Finally, the HCL color space is oddly shaped so it’s possible to sample points that are unevenly distributed along either side of the <code>H_point</code> value. That could shift the overall average Hue. To prevent that, I’m adding a catch that if the point couldn’t exist on the other side of the Hue values, then discard it. That’ll make the final regions trimmed out of the ellipse to be symmetric across <code>H_point</code>.</p>
+<p>There are a couple of ways to get points that don’t have actual values, such as outside useable Chroma values or Luminance values outside [0, 100]. To handle this, we’ll add in a feature that over samples points, only keeps the ones that have a color, then samples down to the desired amount. The new <code>oversample</code> parameter adds in the extra points. Of course, this could be down in a while loop, but this is fast enough and normally works.</p>
+<p>We might also want to limit the Hue values. For example, if we only want red colors without going into purple or orange, we can block samples too far away based on their H values, even if our <code>perpendicular_C_L_radius</code> is too large. We’ll just crop any points out that go past those bounds.</p>
+<p>Finally, the HCL color space is oddly shaped, so it’s possible to sample points distributed unevenly along either side of the <code>H_point</code> value. That could shift the overall average Hue. To prevent that, I’m adding a catch that if the point couldn’t exist on the other side of the Hue values, then discard it. That’ll make the final regions trimmed out of the ellipse to be symmetric across <code>H_point</code>.</p>
 <pre class="r"><code>##--------
 # Clean up
 ##--------
@@ -867,7 +866,7 @@ Compare previous samples
 </h2>
 </center>
 <hr>
-<p>Now we can try this function with the previous values to how it works.</p>
+<p>Now we can try this function with the previous values to confirm how it works.</p>
 <pre class="r"><code>##-------
 # Compare
 ##-------
@@ -901,7 +900,7 @@ p1 + p2 + p3</code></pre>
 Compare: Sample Points
 </p>
 </div>
-<p>Here, we can see the differences in samples based on the different parameters. By changing the parameters, we can get a variety of color sampling, even when starting with the same base point. The rest of the graphs can be created to compare, but they aren’t that interesting since they’re just repeats of the previous image.</p>
+<p>Here, we can see the differences in samples based on the different parameters. By changing the parameters, we can get a variety of color sampling, even when starting with the same base point. The rest of the graphs can be created for comparing the outputs, but they aren’t that interesting since they’re just repeats of the previous image.</p>
 <hr>
 <center>
 <h2>
@@ -909,7 +908,7 @@ Trying some other parameters
 </h2>
 </center>
 <hr>
-<p>Now that we have all our functions setup, let’s try them out on two more examples. The first one will be on an ellipse that hits the edge.</p>
+<p>Now that we have all our functions set up let’s try them out on two more examples. The first one will be on an ellipse that hits the edge.</p>
 <pre class="r"><code>#--------------------
 # Try some other ones
 #--------------------
@@ -956,7 +955,7 @@ p1 + p2</code></pre>
 Outside Edge: Base Color and Sample Points
 </p>
 </div>
-<p>The following image shows that the ellipse should go outside the bounds, but there aren’t any color values for those points. So, the ellipse is clipped off by that bound. However, the square on the right in the previous image is filled in completely. If we started with a sample of the size we wanted at the end, the clipped points would be missing. The previous image worked because the original set of points was bigger, then clipped, then sampled to the desired amount.</p>
+<p>The following image shows that the ellipse should go outside the bounds, but there aren’t any color values for those points. So, the ellipse is clipped off by that bound. However, the square on the right in the previous image is filled in completely. If we started with a sample of the size we wanted at the end, the clipped points would be missing. The previous image worked because the original set of points was bigger, clipped, then sampled to the desired amount.</p>
 <details>
 <summary>
 [C-L Plane Code]
@@ -1022,8 +1021,8 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 Outside Edge: H-C Plane
 </p>
 </div>
-<p>One important detail to catch in the above image is the point on the top right. This occurs because we check that the image is symmetric across Hue = <code>H_point</code>. If we didn’t have that check, the right side would stretch up farther to match the boundary of the H-C Plane in the left side.</p>
-<p>Finally, we can end this post on one more example. For this one, we’ll place the ellipse near the inside of the HCL color space.</p>
+<p>One important detail to catch in the above image is the sharp end on the top right. This clipping occurs because we check that the image is symmetric across Hue = <code>H_point</code>. If we didn’t have that check, the right side would stretch up farther to match the boundary of the H-C Plane on the left side.</p>
+<p>Finally, we can end this post with one more example. For this one, we’ll place the ellipse near the inside of the HCL color space.</p>
 <pre class="r"><code># Inside Edge ----
 H_point &lt;- 319
 C_point &lt;- 10
@@ -1066,7 +1065,6 @@ p1 + p2</code></pre>
 Inside Edge: Base Color and Sample Points
 </p>
 </div>
-<p>The H-L Curve is very different from previous ones because of how close to the center the <code>C_point</code> is. The makes values close to the center span a larger region of Hue values than compared to points farther away to the outside.</p>
 <details>
 <summary>
 [C-L Plane Code]
@@ -1082,6 +1080,7 @@ p1 + p2</code></pre>
 Inside Edge: C-L Plane
 </p>
 </div>
+<p>The H-L Curve is very different from previous ones because of how close to the center the <code>C_point</code> is. Values close to the center span a larger region of Hue values than compared to points farther away to the outside, which creates a new shape.</p>
 <details>
 <summary>
 [H-L Curve Code]
@@ -1114,7 +1113,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 Inside Edge: Plane Perpendicular to C-L Plane
 </p>
 </div>
-<p>For the final image, we can see that the ellipse is cut up by the <code>H_bound</code>. This prevents the ellipse from reaching across the middle.</p>
+<p>For the final image, we can see that the H_bound cuts up the ellipse. The boundary prevents the ellipse from stretching across the HCL color space’s middle.</p>
 <details>
 <summary>
 [H-C Plane Code]
@@ -1133,4 +1132,4 @@ Inside Edge: H-C Plane
 </p>
 </div>
 <hr>
-<p>To continue this work further, there are a few options. This was done using the <code>tidyverse</code> with a lot of <code>mutate</code> steps but it could easily be done squished together or with matrix multiplication/more efficient techniques. There are also other parameteraizations, such as the two focii for an ellipse. There could also be options for other clipping or not including of the current clipping (like keeping symmetric across <code>H_point</code>).</p>
+<p>There are a few options to continue this work further. This code uses the <code>tidyverse</code> with many <code>mutate</code> steps, but it can be done squished together or done with matrix multiplication/other more efficient techniques. There are also different parameterizations, such as the two foci for an ellipse. There could also be options for other clipping or not including some of the current clipping (like keeping symmetric across <code>H_point</code>).</p>

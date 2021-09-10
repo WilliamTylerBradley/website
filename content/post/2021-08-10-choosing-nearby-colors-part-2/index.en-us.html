@@ -3,7 +3,7 @@ title: Choosing Nearby Colors Part 2
 author: Tyler
 date: '2021-08-10'
 slug: index.en-us
-summary: Follow-up from previous post.
+summary: Follow-up from previous post using the HCL coordinates directly.
 thumbnailImage: /post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/thumbnail.png
 thumbnailImagePosition: "bottom"
 ---
@@ -11,7 +11,7 @@ thumbnailImagePosition: "bottom"
 <script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
 
 
-<p>This blog post follows up from the previous one. Code in that post finds colors in the HCL color space by sampling points from a sphere centered on a base point. There’s a mismatch between how the sphere is determined (Cartesian coordinates of x, y, L) and the colors are specified (polar coordinates of H, C, L) so a conversion happens in the code.</p>
+<p>This blog post follows up on the previous one. Code in that post finds colors in the HCL color space by sampling points from a sphere centered on a base point. There’s a mismatch between how the sphere is determined (Cartesian coordinates of x, y, L) and the colors are parameterized (polar coordinates of H, C, L), so a conversion happens in the code.</p>
 <p>This post looks into what happens if you just start with a “sphere” based on Hue, Chroma, Luminance values. So we’ll set up shapes that expand out from the base point along Hue, Chroma, and Luminance directly.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
 <hr>
 <center>
@@ -220,7 +220,7 @@ graph_C_tangent_plane &lt;- function(C_tangent_plane, color_hex) {
 graph_C_tangent_plane(C_tangent_plane, color_hex)</code></pre>
 </details>
 <p><br></p>
-<p>Let’s first look at all our graphs for our base color. This time I’m picking pink. We can see the C-L Plane, H-C Plane, and H-L Curve images to get a basic understanding of where the color is in the HCL color space.</p>
+<p>Let’s first look at all our graphs for our base color. This time I’m picking pink. Next, we can see the C-L Plane, H-C Plane, and H-L Curve images to understand the color in the HCL color space.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -264,7 +264,7 @@ Base Color: Plane Perpendicular to C-L Plane
 </div>
 </div>
 </div>
-<p>After the base color is understood, we can look at what happens if you extend out to a sphere.</p>
+<p>After the base color is understood, we can see what happens if you extend out to a sphere.</p>
 <hr>
 <center>
 <h2>
@@ -272,7 +272,7 @@ xyL Perimeter
 </h2>
 </center>
 <hr>
-<p>For this code, we’ll only pull points on the perimeter, unlike the previous post that had points at random in the sphere. For the first main section, we’ll look at moving away from the base point using Cartesian coordinate of x, y, and L. This is exactly what we did in the last post, so it should look familiar. The main new addition is cutting the shape into pieces and graphing them on facets.</p>
+<p>We’ll only pull points on the perimeter for this code, unlike the previous post that had points randomly throughout the sphere. We’ll move away from the base point using the Cartesian coordinates of x, y, and L for the first main section. This is exactly what we did in the last post, so it should look familiar. The main new addition is cutting the shape into pieces and graphing them on facets.</p>
 <details>
 <summary>
 [xyL Perimeter Code]
@@ -636,7 +636,7 @@ graph_parallel_L_by_perpendicular(xyl)</code></pre>
 xyL Info
 </p>
 </div>
-<p>Above, we see the basic information about the base color and the points sampled around the perimeter of the sphere (width is 15 units). Below, we see the sphere cut up by C-L Planes at different Hue values. We see that has we move across different values for our Hue, we slice through the sphere to get different shapes. On the right image, the ends are moved left slightly and the doughnuts in the middle values tend to have a little more width on the right side. That occurs because our cuts are fanning across the sphere at an angle, not moving along in a straight line. So, one side gets a little more of the perimeter to plot.</p>
+<p>Above, we see the basic information about the base color and the points sampled around the sphere’s perimeter (width is 15 units). Below, we see the sphere cut up by C-L Planes at different Hue values. We see that as we move across different values for our Hue, we slice through the sphere to get different shapes. For example, on the right image, the ends are moved left slightly, and the doughnuts in the middle values tend to have a little more width on the right side. The distortion occurs because our cuts are fanning across the sphere at an angle, not moving along in a straight line. So, one side gets a little more of the perimeter to plot.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -655,7 +655,7 @@ xyL C-L by H cuts
 </div>
 </div>
 </div>
-<p>The next set shows the H-L Curve by different Chroma values. Here, we might expect to see circles but instead we get ovals. This occurs because the circle made by moving Hue through the sphere cuts along a curve that is then flattened for these facets. Also, technically the facets are little off because the width of the graph should be increasing as Chroma increases. Even though they show the same Hue values, the arc length of the circle should be getting longer so the graphs should be getting wider.</p>
+<p>The next set shows the H-L Curve by different Chroma values. Here, we might expect to see circles, but instead, we get ovals. These shapes occur because the ring made by moving Hue through the sphere cuts along a curve, then it’s flattened for these facets. Also, technically the facets are a little off because the width of the graph should be increasing as Chroma increases. So even though they show the same Hue values, the arc length of the circle should be getting longer. Therefore the graphs should be getting wider.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -693,14 +693,14 @@ xyL H-C by L cuts
 </div>
 </div>
 </div>
-<p>The next three images also have circles because we’re cutting our sphere along straight lines equal distances from each other. The first facet set looks at the sphere from up above as we cut through different Lumanince values. This image is the same image as the right side in the previous set, but each sub-image is rotated so the Hue angle is seen moving flat left to right. The x-axis is the distance along the C-L Plane that cuts the sphere in half. This isn’t equivalent to Chroma because that moves at an angle determined by Hue, but is related. The values are the Chroma values on the main C-L Plane moving in a straight line to the C-L Plane. The y-axis is the distance from the C-L Plane in either direction.</p>
+<p>The following three images also have circles because we’re cutting our sphere along straight lines equal distances from each other. The first facet set looks at the sphere from up above as we cut through different Luminance values. This image is the same as the right side in the previous group, but each sub-image gets rotated, so the Hue angle moves flat left to right. The x-axis is the distance along the C-L Plane that cuts the sphere in half. This distance isn’t equivalent to Chroma because that moves at an angle determined by Hue, but it is related. The values are the Chroma values on the C-L Plane shifted in a straight line from the C-L Plane. The y-axis is the distance from the C-L Plane in either direction.</p>
 <div class="figure">
 <img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_per.png" alt="xyL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
 xyL Parallel-Perpendicular Distances by L cuts
 </p>
 </div>
-<p>The next two images both have the Luminance values along the y-axis, but cut the sphere differently. The left side slices the sphere moving out from the center of the HCL color space, along the Chroma values. Here we see the nice circles instead of ovals for the images of the H-L cut by C. The right side cuts are made parallel to the C-L Plane and move along a straight line. We’re also getting circles that aren’t a little lop-sided, unlike the C-L cut by H ones.</p>
+<p>The next two images both have the Luminance values along the y-axis but cut the sphere differently. The left side slices the sphere moving out from the center of the HCL color space along the Chroma values. Here we see the nice circles instead of ovals for the images of the H-L cut by C. The right side cuts are made parallel to the C-L Plane and move along a straight line. We’re also getting circles that aren’t a little lop-sided, unlike the C-L cut by H ones.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -726,7 +726,7 @@ HCL Perimeter
 </h2>
 </center>
 <hr>
-<p>For the second main section, we’ll move away from the base point along Hue, Chroma, and Luminance. This means curving around when changing Hue values.</p>
+<p>We’ll move away from the base color along Hue, Chroma, and Luminance for the second main section. So we’ll curve around when changing Hue values.</p>
 <details>
 <summary>
 [HCL Perimeter Code]
@@ -888,7 +888,7 @@ graph_parallel_L_by_perpendicular(hcl)</code></pre>
 HCL Info
 </p>
 </div>
-<p>This first set of graphs plots the C-L plane split by Hue values, both the perimeter and where it fits in the color space. We see these nice circles as the perimeter is cut moving along Hue values.</p>
+<p>This first set of graphs plots the C-L plane split by Hue values with both the perimeter and where it fits in the color space. We see these nice circles as the perimeter is cut moving along Hue values.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -907,7 +907,7 @@ HCL C-L by H cuts
 </div>
 </div>
 </div>
-<p>The next set shows H-L Curve split by different Chroma values. We’re also getting nice circles unlike the xyL section.</p>
+<p>The next set shows H-L Curve split by different Chroma values. We’re also getting nice circles, unlike the xyL section.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -926,7 +926,7 @@ HCL H-L by C cuts
 </div>
 </div>
 </div>
-<p>The next graph breaks the trend of nice circles. Here we see tear drop shapes instead. The next few images pull this apart a little more.</p>
+<p>The following graph breaks the trend of nice circles. Here we see teardrop shapes instead. The next few images pull this apart a little more.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -945,14 +945,14 @@ HCL H-C by L cuts
 </div>
 </div>
 </div>
-<p>Here we see the tear-drop shapes in more detail. Because we created our “sphere” along the polar coordinates, it doesn’t turn out like we might expect. This shape’s height is a function of what a sphere should be but augmented by the distance between Hue values increasing when Chroma increases. Notice that center Chroma values is at 26. Not in the middle of the circular part, like at 30-ish.</p>
+<p>Here we see the teardrop shapes in more detail. Because we created our “sphere” following polar coordinates, it doesn’t turn out as we might expect. This shape’s height is a function of what a sphere should be but augmented by the distance between Hue values increasing when Chroma increases. Notice that the center Chroma value is at 26. Not in the middle of the circular part, like at 30-ish.</p>
 <div class="figure">
 <img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.png" alt="HCL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
 <p class="caption">
 HCL Parallel-Perpendicular Distances by L cuts
 </p>
 </div>
-<p>We also get a squished version for the image on the left and a version with few cuts because the shape doesn’t reach out as after for the image on the right.</p>
+<p>We also get a squished version for the image on the left. There are fewer cuts because the shape doesn’t reach out as far as the image on the right.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -971,7 +971,7 @@ HCL Parallel Distance-L by Perpendicular Distance cuts
 </div>
 </div>
 </div>
-<p>This is a little unwieldy to compare the different main sections apart, so in the next one we’ll add them together.</p>
+<p>It is a little unwieldy to compare the different main sections apart, so we’ll add them together in the next one.</p>
 <hr>
 <center>
 <h2>
@@ -979,7 +979,7 @@ Compare Perimeters
 </h2>
 </center>
 <hr>
-<p>For the following images, the two sets we previously created are stuck together and then graphed. This will highlight the differences well.</p>
+<p>For the following images, the two sets we previously created are stuck together and then graphed to highlight the differences well.</p>
 <details>
 <summary>
 [Compare Code]
@@ -1137,7 +1137,7 @@ ggplot(data = compare,
   theme_void() +
   facet_grid(~setting)</code></pre>
 </details>
-<p>In the first image we see the lop-sidedness of the xyL points with the circles of the HCL ones. Also, we can easily see that the XYL points stretch out to farther Hue values. Then we have the ovals for xyL and circles for HCL.</p>
+<p>This section will have graphs with points from the xyL function in blue and HCL in orange. In the left image, we see the lop-sidedness of the xyL points with the circles of the HCL ones. Also, we can easily see that the XYL points stretch out to farther Hue values. Then we have the ovals for xyL and circles for HCL.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1156,6 +1156,7 @@ Comparison H-L by C cuts
 </div>
 </div>
 </div>
+<p>Then we can see the circles for xyL and teardrops for HCL.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1174,6 +1175,7 @@ Comparison Parallel-Perpendicular by L cuts
 </div>
 </div>
 </div>
+<p>Finally, we get a comparison that confirms the HCL function results in squeezing the perimeter, not stretching it vertically.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1192,26 +1194,22 @@ Comparison Parallel-L by Perpendicular cuts
 </div>
 </div>
 </div>
-<p>So let’s just compare the samples directly.</p>
-<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
-<div>
+<p>Graphing the perimeters is nice to see what’s going on mathematically in the space, but the main result is in the end colors. So the last images of this main section show the direct colors of the samples.</p>
+<p>The first comparison has the samples sorted by Hue for the columns, then within each column, sorted by Luminance. I can’t tell a huge difference, but the Hue values for xyL seem to stretch slightly more than HCL, and HCL has a little more gray.</p>
 <div class="figure">
 <img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples.png" alt="Comparison Samples H by L" style="display:block; margin:auto;" />
 <p class="caption">
 Comparison Samples H by L
 </p>
 </div>
-</div>
-<div>
+<p>The second comparison has the samples sorted by Hue (like the first comparison), then sorted by Chroma. To me, this looks very different for having the same colors in the same columns. The HCL square is a little grayer at the bottom.</p>
 <div class="figure">
 <img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples2.png" alt="Comparison Samples H by C" style="display:block; margin:auto;" />
 <p class="caption">
 Comparison Samples H by C
 </p>
 </div>
-</div>
-</div>
-<p>I think at this point in the post I’m supposed to say one is better than the other, but I think they’re just different. It really depends on what you’re looking for in selecting colors.</p>
+<p>For the final two main sections, we’ll change only the Chroma value. First, we’ll move everything closer to the center.</p>
 <hr>
 <center>
 <h2>
@@ -1219,7 +1217,7 @@ Lower Chroma Value
 </h2>
 </center>
 <hr>
-<p>Set Chroma = 16, everything else is the same.</p>
+<p>We’ll start by changing the base Chroma value from 26 to 16. Everything else is the same.</p>
 <details>
 <summary>
 [Lower Chroma Value Code]
@@ -1298,6 +1296,7 @@ ggplot(data = compare,
   facet_grid(~setting)</code></pre>
 </details>
 <p><br></p>
+<p>From these graphs, we can see everything is exaggerated. For example, the first two images have similar circles for HCL, but xyL is breaking apart and getting stretched.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1316,6 +1315,7 @@ Lower C H-L by C cuts
 </div>
 </div>
 </div>
+<p>Then we see the circles for xyL, but HCL has a very tight teardrop shape.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1334,6 +1334,7 @@ Lower C Parallel-Perpendicular by L cuts
 </div>
 </div>
 </div>
+<p>The same trend continues with the exaggeration for HCL.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1352,6 +1353,7 @@ Lower C Parallel-L by Perpendicular cuts
 </div>
 </div>
 </div>
+<p>Finally, we can compare the sampled colors directly.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1377,7 +1379,7 @@ Higher Chroma Value
 </h2>
 </center>
 <hr>
-<p>Set Chroma = 75.</p>
+<p>For the last main section, we’ll set Chroma to 75.</p>
 <details>
 <summary>
 [Higher Chroma Value Code]
@@ -1472,6 +1474,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_
        width = 5, height = 2.5)</code></pre>
 </details>
 <p><br></p>
+<p>This time, the results have a different shape. Now, HCL stretches out farther than xyL (but still in a circle).</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1490,6 +1493,7 @@ Higher C H-L by C cuts
 </div>
 </div>
 </div>
+<p>The graphs from above show the stretching well. Instead of the teardrop shape, we now have ovals. At some point in increasing the Chroma value, the HCL function surpasses xyL.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1508,6 +1512,7 @@ Higher C Parallel-Perpendicular by L cuts
 </div>
 </div>
 </div>
+<p>We see the same trend continue here.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1526,6 +1531,7 @@ Higher C Parallel-L by Perpendicular cuts
 </div>
 </div>
 </div>
+<p>And finally, we can compare the examples again.</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
 <div>
 <div class="figure">
@@ -1544,6 +1550,7 @@ Higher C Samples H by C
 </div>
 </div>
 </div>
+<p>I think at the end of the post, I’m supposed to say one is better than the other, but I think they’re just different. It really depends on what you’re looking for in selecting colors. Looking at the colors is the best way to do that, but the other graphs help explain what is happening and determine the next steps.</p>
 <div class="footnotes">
 <hr />
 <ol>
