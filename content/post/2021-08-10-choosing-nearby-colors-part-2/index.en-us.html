@@ -1,0 +1,1559 @@
+---
+title: Choosing Nearby Colors Part 2
+author: Tyler
+date: '2021-08-10'
+slug: index.en-us
+summary: Follow-up from previous post using the HCL coordinates directly.
+thumbnailImage: /post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/thumbnail.png
+thumbnailImagePosition: "bottom"
+---
+
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<p>This blog post follows up on the previous one. Code in that post finds colors in the HCL color space by sampling points from a sphere centered on a base point. There’s a mismatch between how the sphere is determined (Cartesian coordinates of x, y, L) and the colors are parameterized (polar coordinates of H, C, L), so a conversion happens in the code.</p>
+<p>This post looks into what happens if you just start with a “sphere” based on Hue, Chroma, Luminance values. So we’ll set up shapes that expand out from the base point along Hue, Chroma, and Luminance directly.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<hr>
+<center>
+<h2>
+Base Point Location
+</h2>
+</center>
+<hr>
+<details>
+<summary>
+[A Lot of Setup Code]
+</summary>
+<pre class="r"><code>##---------
+# Libraries
+##---------
+library(tidyverse)
+library(patchwork)
+library(colorspace)
+
+##------------
+# Pick a color
+##------------
+H_point &lt;- 322
+C_point &lt;- 26
+L_point &lt;- 69
+
+color_hex &lt;- hcl(H_point, 
+                 C_point, 
+                 L_point,
+                 fixup = FALSE)
+
+##--------------------------------
+# See color in H, C, L color space 
+##--------------------------------
+# C-L Plane ----
+get_C_L_plane &lt;- function(H_point) {
+  expand_grid(H = H_point,
+              C = seq(0, 180, .5),
+              L = seq(1, 100, .5)) %&gt;%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %&gt;%
+    filter(!is.na(color_value))
+}
+C_L_plane &lt;- get_C_L_plane(H_point)
+
+graph_C_L_plane &lt;- function(C_L_plane, color_hex) {
+  ggplot() +
+    geom_point(data = C_L_plane,
+               aes(C, L, color = color_value, fill = color_value)) +
+    scale_x_continuous(labels = abs) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    geom_point(aes(x = C_point,
+                   y = L_point),
+               color = &#39;black&#39;,
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_equal()
+}
+graph_C_L_plane(C_L_plane, color_hex)
+
+# H-L Curve ----
+get_H_L_curve &lt;- function(C_point) {
+  expand_grid(H = seq(1, 360, 1),
+              C = C_point,
+              L = seq(1, 100, .5)) %&gt;%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %&gt;%
+    filter(!is.na(color_value))
+}
+H_L_curve &lt;- get_H_L_curve(C_point)
+
+label_H_center &lt;- function(H_point, ...) {
+  function(x) {(x + (180 - H_point)) %% 360}
+}
+
+graph_H_L_curve &lt;- function(H_L_curve, color_hex, H_point) {
+  ggplot() +
+    geom_point(data = H_L_curve,
+               aes((H + (180 - H_point)) %% 360, L, 
+                   color = color_value, fill = color_value)) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    geom_point(aes(x = 180, # Because we rotated points to not drop over edge
+                   y = L_point),
+               color = &#39;black&#39;,
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    scale_x_reverse(&#39;H&#39;, # Like you&#39;re standing on the inside
+                    labels = label_H_center(H_point = H_point),
+                    limits = c(360, 0)) +
+    coord_equal()
+}
+graph_H_L_curve(H_L_curve, color_hex, H_point)
+
+# H-C plane ----
+get_H_C_plane &lt;- function(L_point){
+  expand_grid(H = seq(1, 360, 1),
+              C = seq(0, 180, .5),
+              L = L_point) %&gt;%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %&gt;%
+    filter(!is.na(color_value))
+}
+H_C_plane &lt;- get_H_C_plane(L_point)
+
+graph_H_C_plane &lt;- function(H_C_plane, color_hex) {
+  ggplot() +
+    geom_point(data = H_C_plane,
+               aes(H, C, color = color_value, fill = color_value)) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_continuous(breaks = seq(45, 360, 45),
+                       minor_breaks = seq(0, 315, 45) + 45/2,
+                       labels = c(&#39;45&#39;, &#39;90&#39;, &#39;135&#39;, &#39;180&#39;, 
+                                  &#39;225&#39;, &#39;270&#39;, &#39;315&#39;, &#39;0|360&#39;)) +
+    scale_y_continuous(limits = c(0, 180)) +
+    geom_point(aes(x = H_point,
+                   y = C_point),
+               color = &#39;black&#39;,
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_polar(start = 270 * pi / 180,
+                direction = -1)
+}
+graph_H_C_plane(H_C_plane, color_hex)
+
+# C tangent plane ----
+C_circle &lt;- data.frame(H = seq(1, 360),
+                       C = C_point,
+                       color_value = &quot;white&quot;)
+C_tangent_plane &lt;- expand_grid(x = C_point, # Plane perpendicular to H at C
+                               perpendicular_from_C_L = 
+                                 seq(-sqrt(180^2 - C_point^2), sqrt(180^2 - C_point^2)),
+                               L = seq(1, 100, 1)) %&gt;%
+  mutate(x_rotate = x * cos(H_point * pi/180) -  # rotate
+           perpendicular_from_C_L * sin(H_point * pi/180),
+         y_rotate = x * sin(H_point * pi/180) + 
+           perpendicular_from_C_L * cos(H_point * pi/180)) %&gt;%
+  mutate(x = x_rotate,
+         y = y_rotate) %&gt;%
+  select(-x_rotate, -y_rotate)  %&gt;%
+  mutate(H = (atan2(y, x) * 180/pi) %% 360,
+         C = sqrt(x^2 + y^2)) %&gt;%
+  mutate(color_value = &quot;white&quot;)
+ggplot(data = H_C_plane,
+       aes(H, C, color = color_value, fill = color_value)) +
+  geom_point() +
+  scale_color_identity() +
+  scale_fill_identity() +
+  scale_x_continuous(breaks = seq(45, 360, 45),
+                     minor_breaks = seq(0, 315, 45) + 45/2,
+                     labels = c(&#39;45&#39;, &#39;90&#39;, &#39;135&#39;, &#39;180&#39;, 
+                                &#39;225&#39;, &#39;270&#39;, &#39;315&#39;, &#39;0|360&#39;)) +
+  scale_y_continuous(limits = c(0, 180)) +
+  geom_path(data = C_circle) +
+  geom_segment(x = H_point,
+               y = 0,
+               xend = H_point,
+               yend = C_point,
+               col = &quot;white&quot;) +
+  geom_point(data = C_tangent_plane, col = &quot;black&quot;) +
+  geom_point(x = H_point,
+             y = C_point,
+             color = &#39;black&#39;,
+             fill = color_hex,
+             shape = 21) +
+  coord_polar(start = 270 * pi / 180,
+              direction = -1)
+
+get_C_tangent_plane &lt;- function(H_point, C_point) {
+  expand_grid(x = C_point, # Plane perpendicular to H at C
+              perpendicular_from_C_L = seq(-180, 180, .5),
+              L = seq(1, 100, .5)) %&gt;%
+    mutate(x_rotate = x * cos(H_point * pi/180) -  # rotate
+             perpendicular_from_C_L * sin(H_point * pi/180),
+           y_rotate = x * sin(H_point * pi/180) + 
+             perpendicular_from_C_L * cos(H_point * pi/180)) %&gt;%
+    mutate(x = x_rotate,
+           y = y_rotate) %&gt;%
+    select(-x_rotate, -y_rotate)  %&gt;%
+    mutate(H = (atan2(y, x) * 180/pi) %% 360,
+           C = sqrt(x^2 + y^2)) %&gt;%
+    mutate(color_value = hcl(H, C, L, fixup = FALSE)) %&gt;%
+    filter(!is.na(color_value))
+}
+C_tangent_plane &lt;- get_C_tangent_plane(H_point, C_point)
+
+graph_C_tangent_plane &lt;- function(C_tangent_plane, color_hex) {
+  ggplot() +
+    geom_point(data = C_tangent_plane,
+               aes(perpendicular_from_C_L, L, 
+                   color = color_value, fill = color_value)) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_reverse(&quot;Distance Perpendicular to C-L Plane&quot;,
+                    labels = abs) +
+    geom_point(aes(x = 0,
+                   y = L_point),
+               color = &#39;black&#39;,
+               fill = color_hex,
+               shape = 21,
+               size = 2) +
+    coord_equal()
+}
+graph_C_tangent_plane(C_tangent_plane, color_hex)</code></pre>
+</details>
+<p><br></p>
+<p>Let’s first look at all our graphs for our base color. This time I’m picking pink. Next, we can see the C-L Plane, H-C Plane, and H-L Curve images to understand the color in the HCL color space.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/c_l_plane.png" alt="Base Color: C-L Plane" style="display:block; margin:auto;" />
+<p class="caption">
+Base Color: C-L Plane
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/h_c_plane.png" alt="Base Color: H-C Plane" style="display:block; margin:auto;" />
+<p class="caption">
+Base Color: H-C Plane
+</p>
+</div>
+</div>
+</div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/h_l_curve.png" alt="Base Color: H-L Curve" style="display:block; margin:auto;" />
+<p class="caption">
+Base Color: H-L Curve
+</p>
+</div>
+<p>Then we can look at the plane tangent to the H-L Curve to see the space perpendicular to the C-L plane.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/c_tangent_plane_setup.png" alt="C Tangent Plane setup" style="display:block; margin:auto;" />
+<p class="caption">
+C Tangent Plane setup
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/c_tangent_plane.png" alt="Base Color: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<p class="caption">
+Base Color: Plane Perpendicular to C-L Plane
+</p>
+</div>
+</div>
+</div>
+<p>After the base color is understood, we can see what happens if you extend out to a sphere.</p>
+<hr>
+<center>
+<h2>
+xyL Perimeter
+</h2>
+</center>
+<hr>
+<p>We’ll only pull points on the perimeter for this code, unlike the previous post that had points randomly throughout the sphere. We’ll move away from the base point using the Cartesian coordinates of x, y, and L for the first main section. This is exactly what we did in the last post, so it should look familiar. The main new addition is cutting the shape into pieces and graphing them on facets.</p>
+<details>
+<summary>
+[xyL Perimeter Code]
+</summary>
+<pre class="r"><code>##------------------
+# x, y, L perimeter
+##------------------
+width &lt;- 15
+n_color &lt;- 50 ^ 2
+
+# http://extremelearning.com.au/how-to-evenly-distribute-points-on-a-sphere-more-effectively-than-the-canonical-fibonacci-lattice/#more-3069
+get_xyl_data &lt;- function(H_point, C_point, L_point, width, n_color) {
+  data.frame(theta = 2 * pi * seq(0, n_color - 1) / ((1 + sqrt(5)) / 2),
+             phi = acos(1 - 2 * (seq(0, n_color - 1) + .5) / n_color)) %&gt;%
+    mutate(x = cos(theta) * sin(phi),
+           y = sin(theta) * sin(phi),
+           L = cos(phi)) %&gt;%
+    mutate(x = x * width + C_point * cos(H_point * pi/180),
+           y = y * width + C_point * sin(H_point * pi/180),
+           L = L * width + L_point) %&gt;%
+    mutate(H = (atan2(y, x) * 180/pi) %% 360,
+           C = sqrt(x^2 + y^2)) %&gt;%
+    filter(L &gt;= 0 &amp; L &lt;= 100 &amp; C &gt;= 0) %&gt;%
+    mutate(color_value = hcl(h = H,
+                             c = C,
+                             l = L)) %&gt;%
+    mutate(x = C * cos(H * pi/180),
+           y = C * sin(H * pi/180)) %&gt;%
+    mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+             y * cos(-H_point * pi/180),
+           parallel_along_C_L = x * cos(-H_point * pi/180) - 
+             y * sin(-H_point * pi/180)) %&gt;%
+    mutate(row_value = sample(row_number(), n()),
+           col_value = ceiling(row_value / sqrt(n_color))) %&gt;%
+    mutate(row_value = (row_value %% sqrt(n_color)) + 1) %&gt;%
+    mutate(L_cut = as.character(
+      cut(L, breaks = c(-Inf, seq(L_point - width, 
+                                  L_point + width, 
+                                  length.out = 7), 
+                        Inf),
+          labels = c(L_point - width, 
+                     seq(L_point - (width * .8), 
+                         L_point + (width * .8), 
+                         length.out = 6), 
+                     L_point + width))),
+      C_cut = as.character(
+        cut(C,
+            breaks = c(-Inf, 
+                       seq(C_point - width, 
+                           C_point + width, 
+                           length.out = 7), 
+                       Inf),
+            labels = c(C_point - width, 
+                       seq(C_point - (width * .8), 
+                           C_point + (width * .8), 
+                           length.out = 6), 
+                       C_point + width))),
+      H_cut = as.character(
+        cut((180 - abs(abs(H - H_point) - 180)) * 
+              sign(180 - abs(H - H_point)) * 
+              sign(H - H_point),
+            breaks = c(-Inf, 
+                       seq(0 - width, 
+                           0 + width, 
+                           length.out = 7), 
+                       Inf),
+            labels = c(H_point - width, 
+                       seq(H_point - (width * .8), 
+                           H_point + (width * .8), 
+                           length.out = 6), 
+                       H_point + width) %% 360)),
+      perpendicular_from_C_L_cut = as.character(
+        cut(perpendicular_from_C_L,
+            breaks = c(-Inf, seq(0 - width, 
+                                 0 + width, 
+                                 length.out = 7), 
+                       Inf),
+            labels = c(0 - width, 
+                       seq(0 - (width * .8), 
+                           0 + (width * .8), 
+                           length.out = 6), 
+                       0 + width))),
+      parallel_along_C_L_cut = as.character(
+        cut(parallel_along_C_L,
+            breaks = c(-Inf, 
+                       seq(C_point - width, 
+                           C_point + width, 
+                           length.out = 7), 
+                       Inf),
+            labels = c(C_point - width, 
+                       seq(C_point - (width * .8), 
+                           C_point + (width * .8), 
+                           length.out = 6), 
+                       C_point + width)))) %&gt;%
+    mutate(L_cut = as.factor(as.numeric(L_cut)),
+           C_cut = as.factor(as.numeric(C_cut)),
+           H_cut = as.factor(as.numeric(H_cut)),
+           perpendicular_from_C_L_cut = 
+             as.factor(as.numeric(perpendicular_from_C_L_cut)),
+           parallel_along_C_L_cut = 
+             as.factor(as.numeric(parallel_along_C_L_cut))) %&gt;%
+    mutate(H_cut = fct_expand(H_cut, 
+                              as.character(c(H_point - width, 
+                                             seq(H_point - (width * .8), 
+                                                 H_point + (width * .8), 
+                                                 length.out = 6), 
+                                             H_point + width) %% 360)),
+           perpendicular_from_C_L_cut = 
+             fct_expand(perpendicular_from_C_L_cut,
+                        as.character(c(0 - width, 
+                                       seq(0 - (width * .8), 
+                                           0 + (width * .8), 
+                                           length.out = 6), 
+                                       0 + width)))) %&gt;%
+    mutate(H_cut = fct_relevel(H_cut, 
+                               as.character(c(H_point - width, 
+                                              seq(H_point - (width * .8), 
+                                                  H_point + (width * .8), 
+                                                  length.out = 6), 
+                                              H_point + width) %% 360)),
+           perpendicular_from_C_L_cut = 
+             fct_relevel(perpendicular_from_C_L_cut,
+                         as.character(c(0 - width, 
+                                        seq(0 - (width * .8), 
+                                            0 + (width * .8), 
+                                            length.out = 6), 
+                                        0 + width)))) %&gt;%
+    mutate(H_cut = fct_rev(H_cut),
+           perpendicular_from_C_L_cut = fct_rev(perpendicular_from_C_L_cut))
+}
+
+xyl &lt;- get_xyl_data(H_point, C_point, L_point, width, n_color)
+
+graph_info &lt;- function(H_point, C_point, L_point) {
+  color_hex &lt;- hcl(H_point, 
+                   C_point,
+                   L_point,
+                   fixup = FALSE)
+  
+  ggplot() +
+    geom_rect(aes(xmin = 0, xmax = 1,
+                  ymin = 0, ymax = .5), col = color_hex, fill = color_hex) +
+    geom_text(data = data.frame(x = 0,
+                                y = seq(1.5, .75, -.25),
+                                label = c(paste(&quot;HEX Value:&quot;, color_hex), 
+                                          paste(&quot;H Value:&quot;, H_point),
+                                          paste(&quot;C Value:&quot;, C_point),
+                                          paste(&quot;L Value:&quot;, L_point))),
+              aes(x, y, label = label), hjust = 0, size = 4) +
+    coord_equal() +
+    theme_void()
+}
+
+graph_sample &lt;- function(color_points) {
+  ggplot(data = color_points,
+         aes(x = row_value,
+             y = col_value,
+             fill = color_value)) +
+    geom_tile() +
+    coord_equal() +
+    scale_fill_identity() +
+    theme_void()
+}
+
+p1 &lt;- graph_info(H_point, C_point, L_point)
+p2 &lt;- graph_sample(xyl)
+p1 + p2
+
+# C L plane by H
+graph_C_L_by_H &lt;- function(color_points) {
+  ggplot(data = color_points, aes(C, L, 
+                                  col = color_value, fill = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    facet_wrap(~ H_cut, nrow = 2) +
+    coord_equal() 
+}
+
+get_C_L_plane_by_H &lt;- function(color_points, H_point, width) {
+  map_dfr(as.numeric(as.character(unique(color_points$H_cut))), 
+          get_C_L_plane) %&gt;%
+    mutate(H_cut = as.factor(H)) %&gt;%
+    mutate(H_cut = fct_expand(H_cut, 
+                              as.character(c(H_point - width, 
+                                             seq(H_point - (width * .8), 
+                                                 H_point + (width * .8), 
+                                                 length.out = 6), 
+                                             H_point + width) %% 360))) %&gt;%
+    mutate(H_cut = fct_relevel(H_cut, 
+                               as.character(c(H_point - width, 
+                                              seq(H_point - (width * .8), 
+                                                  H_point + (width * .8), 
+                                                  length.out = 6), 
+                                              H_point + width) %% 360))) %&gt;%
+    mutate(H_cut = fct_rev(H_cut))
+}
+C_L_plane_by_H &lt;- get_C_L_plane_by_H(xyl, H_point, width)
+
+graph_C_L_plane_by_H &lt;- function(C_L_plane, color_points) {
+  ggplot() +
+    geom_point(data = C_L_plane,
+               aes(C, L, color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes(C, L, color = &quot;white&quot;, fill = &quot;white&quot;)) +
+    scale_x_continuous(labels = abs) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    facet_wrap(~ H_cut, nrow = 2) +
+    coord_equal()
+}
+graph_C_L_plane_by_H(C_L_plane_by_H, xyl)
+graph_C_L_by_H(xyl)
+
+# H L curve
+graph_H_L_by_C &lt;- function(color_points, H_point) {
+  ggplot(data = color_points, aes((H + (180 - H_point)) %% 360, L, 
+                                  color = color_value, fill = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_reverse(&#39;H&#39;, # Like you&#39;re standing on the inside
+                    labels = label_H_center(H_point = H_point)) +
+    facet_wrap(~ C_cut, nrow = 2) +
+    coord_equal()
+}
+
+get_H_L_curve_by_C &lt;- function(color_points) {
+  map_dfr(as.numeric(as.character(
+    unique(color_points$C_cut))), get_H_L_curve) %&gt;%
+    mutate(C_cut = as.factor(C))
+}
+H_L_curve_by_C &lt;- get_H_L_curve_by_C(xyl)
+
+graph_H_L_curve_by_C &lt;- function(H_L_curve_by_C, color_points, H_point) {
+  ggplot() +
+    geom_point(data = H_L_curve_by_C,
+               aes((H + (180 - H_point)) %% 360, L, 
+                   color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes((H + (180 - H_point)) %% 360, L, 
+                   color = &quot;white&quot;, fill = &quot;white&quot;)) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_reverse(&#39;H&#39;, # Like you&#39;re standing on the inside
+                    labels = label_H_center(H_point = H_point),
+                    limits = c(360, 0)) +
+    facet_wrap(~ C_cut, nrow = 2) +
+    coord_equal()
+}
+graph_H_L_curve_by_C(H_L_curve_by_C, xyl, H_point)
+graph_H_L_by_C(xyl, H_point)
+
+# H C plane by L
+graph_x_y_by_L &lt;- function(color_points, H_point) {
+  ggplot(data = color_points, aes(x, y, 
+                                  col = color_value, fill = color_value)) +
+    geom_abline(slope = c(tan(-67.5 * pi/180), 
+                          tan(-45 * pi/180), 
+                          tan(-22.5 * pi/180),
+                          0, 100000,
+                          tan(22.5 * pi/180), 
+                          tan(45 * pi/180), 
+                          tan(67.5 * pi/180)), 
+                intercept = 0,
+                color = &quot;white&quot;) +
+    geom_abline(slope = tan(H_point * pi/180), 
+                intercept = 0,
+                color = &quot;black&quot;) +
+    geom_point() +
+    scale_color_identity() +
+    scale_fill_identity() +
+    facet_wrap(~ L_cut, nrow = 2) +
+    coord_equal() +
+    theme(axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank(),
+          panel.grid.major=element_blank(), panel.grid.minor=element_blank())
+}
+
+get_H_C_plane_by_L &lt;- function(color_points) {
+  map_dfr(as.numeric(
+    as.character(unique(color_points$L_cut))), get_H_C_plane) %&gt;%
+    mutate(L_cut = as.factor(L))
+}
+H_C_plane_by_L &lt;- get_H_C_plane_by_L(xyl)
+
+graph_H_C_plane_by_L &lt;- function(H_C_plane_by_L, color_points) {
+  ggplot() +
+    geom_point(data = H_C_plane_by_L,
+               aes(H, C, color = color_value, fill = color_value)) +
+    geom_point(data = color_points,
+               aes(H , C, color = &quot;white&quot;, fill = &quot;white&quot;)) +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_x_continuous(breaks = seq(45, 360, 45),
+                       minor_breaks = seq(0, 315, 45) + 45/2,
+                       labels = c(&#39;45&#39;, &#39;90&#39;, &#39;135&#39;, &#39;180&#39;, 
+                                  &#39;225&#39;, &#39;270&#39;, &#39;315&#39;, &#39;0|360&#39;)) +
+    scale_y_continuous(limits = c(0, 180)) +
+    facet_wrap(~ L_cut, nrow = 2) +
+    coord_polar(start = 270 * pi / 180,
+                direction = -1)
+}
+graph_H_C_plane_by_L(H_C_plane_by_L, xyl)
+graph_x_y_by_L(xyl, H_point)
+
+# C tangent plane
+label_perpendicular_from_C_L_cut&lt;- function(x) {
+  as.character(abs(as.numeric(x)))
+}
+
+graph_parallel_perpendicular_by_L &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = parallel_along_C_L,
+             y = perpendicular_from_C_L,
+             color = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_y_continuous(&quot;Distance Perpendicular to C-L Plane&quot;, # similar to H
+                       labels = abs) +
+    labs(x = &quot;Distance Parallel to C-L Plane&quot;) + # similar to C
+    facet_wrap(~ L_cut, nrow = 2) +
+    coord_equal()
+}
+graph_parallel_perpendicular_by_L(xyl)
+
+graph_perpendicular_L_by_parallel &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = perpendicular_from_C_L,
+             y = L,
+             color = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    scale_x_continuous(&quot;Distance Perpendicular to C-L Plane&quot;,
+                       labels = abs) +
+    scale_y_continuous(labels = abs) +
+    facet_wrap(~ parallel_along_C_L_cut, nrow = 2) +
+    coord_equal()
+}
+graph_perpendicular_L_by_parallel(xyl)
+
+graph_parallel_L_by_perpendicular &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = parallel_along_C_L,
+             y = L,
+             color = color_value)) +
+    geom_point() +
+    scale_color_identity() +
+    labs(x = &quot;Distance Parallel to C-L Plane&quot;) +
+    facet_wrap(~ perpendicular_from_C_L_cut, nrow = 2,
+               labeller = as_labeller(label_perpendicular_from_C_L_cut)) +
+    coord_equal()
+}
+graph_parallel_L_by_perpendicular(xyl)</code></pre>
+</details>
+<br>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_info.png" alt="xyL Info" style="display:block; margin:auto;" />
+<p class="caption">
+xyL Info
+</p>
+</div>
+<p>Above, we see the basic information about the base color and the points sampled around the sphere’s perimeter (width is 15 units). Below, we see the sphere cut up by C-L Planes at different Hue values. We see that as we move across different values for our Hue, we slice through the sphere to get different shapes. For example, on the right image, the ends are moved left slightly, and the doughnuts in the middle values tend to have a little more width on the right side. The distortion occurs because our cuts are fanning across the sphere at an angle, not moving along in a straight line. So, one side gets a little more of the perimeter to plot.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l_plane.png" alt="xyL C-L Plane by H cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL C-L Plane by H cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_c_l.png" alt="xyL C-L by H cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL C-L by H cuts
+</p>
+</div>
+</div>
+</div>
+<p>The next set shows the H-L Curve by different Chroma values. Here, we might expect to see circles, but instead, we get ovals. These shapes occur because the ring made by moving Hue through the sphere cuts along a curve, then it’s flattened for these facets. Also, technically the facets are a little off because the width of the graph should be increasing as Chroma increases. So even though they show the same Hue values, the arc length of the circle should be getting longer. Therefore the graphs should be getting wider.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l_curve.png" alt="xyL H-L Curve by C cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL H-L Curve by C cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_l.png" alt="xyL H-L by C cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL H-L by C cuts
+</p>
+</div>
+</div>
+</div>
+<p>In the next set, we finally get our nice circles. As we slice through our sphere for different Luminance values, we get our circles in the H-C Planes.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c_plane.png" alt="xyL H-C Plane by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL H-C Plane by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_h_c.png" alt="xyL H-C by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL H-C by L cuts
+</p>
+</div>
+</div>
+</div>
+<p>The following three images also have circles because we’re cutting our sphere along straight lines equal distances from each other. The first facet set looks at the sphere from up above as we cut through different Luminance values. This image is the same as the right side in the previous group, but each sub-image gets rotated, so the Hue angle moves flat left to right. The x-axis is the distance along the C-L Plane that cuts the sphere in half. This distance isn’t equivalent to Chroma because that moves at an angle determined by Hue, but it is related. The values are the Chroma values on the C-L Plane shifted in a straight line from the C-L Plane. The y-axis is the distance from the C-L Plane in either direction.</p>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_per.png" alt="xyL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL Parallel-Perpendicular Distances by L cuts
+</p>
+</div>
+<p>The next two images both have the Luminance values along the y-axis but cut the sphere differently. The left side slices the sphere moving out from the center of the HCL color space along the Chroma values. Here we see the nice circles instead of ovals for the images of the H-L cut by C. The right side cuts are made parallel to the C-L Plane and move along a straight line. We’re also getting circles that aren’t a little lop-sided, unlike the C-L cut by H ones.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_per_l.png" alt="xyL Perpendicular Distance-L by Parallel Distance cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL Perpendicular Distance-L by Parallel Distance cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/xyl_par_l.png" alt="xyL Parallel Distance-L by Perpendicular Distance cuts" style="display:block; margin:auto;" />
+<p class="caption">
+xyL Parallel Distance-L by Perpendicular Distance cuts
+</p>
+</div>
+</div>
+</div>
+<hr>
+<center>
+<h2>
+HCL Perimeter
+</h2>
+</center>
+<hr>
+<p>We’ll move away from the base color along Hue, Chroma, and Luminance for the second main section. So we’ll curve around when changing Hue values.</p>
+<details>
+<summary>
+[HCL Perimeter Code]
+</summary>
+<pre class="r"><code>##------------------
+# H, C, L, perimeter
+##------------------
+get_hcl_data &lt;- function(H_point, C_point, L_point, width, n_color) {
+ data.frame(theta = 2 * pi * seq(0, n_color - 1) / ((1 + sqrt(5)) / 2),
+                  phi = acos(1 - 2 * (seq(0, n_color - 1) + .5) / n_color)) %&gt;%
+  mutate(H = cos(theta) * sin(phi),
+         C = sin(theta) * sin(phi),
+         L = cos(phi)) %&gt;%
+  mutate(H = H * width + H_point,
+         C = C * width + C_point,
+         L = L * width + L_point) %&gt;%
+  mutate(H = H %% 360) %&gt;% # not really needed except for graphs
+  filter(L &gt;= 0 &amp; L &lt;= 100 &amp; C &gt;= 0) %&gt;%
+  mutate(color_value = hcl(h = H,
+                           c = C,
+                           l = L)) %&gt;%
+  mutate(x = C * cos(H * pi/180),
+         y = C * sin(H * pi/180)) %&gt;%
+  mutate(perpendicular_from_C_L = x * sin(-H_point * pi/180) + 
+           y * cos(-H_point * pi/180), # not a C value since we didn&#39;t rotate by H
+         parallel_along_C_L = x * cos(-H_point * pi/180) - 
+           y * sin(-H_point * pi/180)) %&gt;%
+  mutate(row_value = sample(row_number(), n()),
+         col_value = ceiling(row_value / sqrt(n_color))) %&gt;%
+  mutate(row_value = (row_value %% sqrt(n_color)) + 1) %&gt;%
+  mutate(L_cut = as.character(
+    cut(L, breaks = c(-Inf, seq(L_point - width, 
+                                L_point + width, 
+                                length.out = 7), 
+                      Inf),
+        labels = c(L_point - width, 
+                   seq(L_point - (width * .8), 
+                       L_point + (width * .8), 
+                       length.out = 6), 
+                   L_point + width))),
+         C_cut = as.character(
+           cut(C,
+               breaks = c(-Inf, 
+                          seq(C_point - width, 
+                              C_point + width, 
+                              length.out = 7), 
+                          Inf),
+               labels = c(C_point - width, 
+                          seq(C_point - (width * .8), 
+                              C_point + (width * .8), 
+                              length.out = 6), 
+                          C_point + width))),
+         H_cut = as.character(
+           cut((180 - abs(abs(H - H_point) - 180)) * 
+                 sign(180 - abs(H - H_point)) * 
+                 sign(H - H_point),
+               breaks = c(-Inf, 
+                          seq(0 - width, 
+                              0 + width, 
+                              length.out = 7), 
+                          Inf),
+               labels = c(H_point - width, 
+                          seq(H_point - (width * .8), 
+                              H_point + (width * .8), 
+                              length.out = 6), 
+                          H_point + width) %% 360)),
+         perpendicular_from_C_L_cut = as.character(
+           cut(perpendicular_from_C_L,
+               breaks = c(-Inf, seq(0 - width, 
+                                    0 + width, 
+                                    length.out = 7), 
+                          Inf),
+               labels = c(0 - width, 
+                          seq(0 - (width * .8), 
+                              0 + (width * .8), 
+                              length.out = 6), 
+                          0 + width))),
+         parallel_along_C_L_cut = as.character(
+           cut(parallel_along_C_L,
+               breaks = c(-Inf, 
+                          seq(C_point - width, 
+                              C_point + width, 
+                              length.out = 7), 
+                          Inf),
+               labels = c(C_point - width, 
+                          seq(C_point - (width * .8), 
+                              C_point + (width * .8), 
+                              length.out = 6), 
+                          C_point + width)))) %&gt;%
+  mutate(L_cut = as.factor(as.numeric(L_cut)),
+         C_cut = as.factor(as.numeric(C_cut)),
+         H_cut = as.factor(as.numeric(H_cut)),
+         perpendicular_from_C_L_cut = 
+           as.factor(as.numeric(perpendicular_from_C_L_cut)),
+         parallel_along_C_L_cut = 
+           as.factor(as.numeric(parallel_along_C_L_cut))) %&gt;%
+  mutate(H_cut = fct_expand(H_cut, 
+                            as.character(c(H_point - width, 
+                                           seq(H_point - (width * .8), 
+                                               H_point + (width * .8), 
+                                               length.out = 6), 
+                                           H_point + width) %% 360)),
+         perpendicular_from_C_L_cut = 
+           fct_expand(perpendicular_from_C_L_cut,
+                      as.character(c(0 - width, 
+                                     seq(0 - (width * .8), 
+                                         0 + (width * .8), 
+                                         length.out = 6), 
+                                     0 + width)))) %&gt;%
+  mutate(H_cut = fct_relevel(H_cut, 
+                             as.character(c(H_point - width, 
+                                            seq(H_point - (width * .8), 
+                                                H_point + (width * .8), 
+                                                length.out = 6), 
+                                            H_point + width) %% 360)),
+         perpendicular_from_C_L_cut = 
+           fct_relevel(perpendicular_from_C_L_cut,
+                      as.character(c(0 - width, 
+                                     seq(0 - (width * .8), 
+                                         0 + (width * .8), 
+                                         length.out = 6), 
+                                     0 + width)))) %&gt;%
+  mutate(H_cut = fct_rev(H_cut),
+         perpendicular_from_C_L_cut = fct_rev(perpendicular_from_C_L_cut))
+}
+
+hcl &lt;- get_hcl_data(H_point, C_point, L_point, width, n_color)
+
+p1 &lt;- graph_info(H_point, C_point, L_point)
+p2 &lt;- graph_sample(hcl)
+p1 + p2
+
+# C L plane by H
+C_L_plane_by_H &lt;- get_C_L_plane_by_H(hcl, H_point, width)
+graph_C_L_by_H(hcl)
+graph_C_L_plane_by_H(C_L_plane_by_H, hcl)
+
+# H L curve
+H_L_curve_by_C &lt;- get_H_L_curve_by_C(hcl)
+graph_H_L_by_C(hcl, H_point)
+graph_H_L_curve_by_C(H_L_curve_by_C, hcl, H_point)
+
+# H C plane by L
+H_C_plane_by_L &lt;- get_H_C_plane_by_L(hcl)
+graph_x_y_by_L(hcl, H_point)
+graph_H_C_plane_by_L(H_C_plane_by_L, hcl)
+
+# C tangent plane
+graph_parallel_perpendicular_by_L(hcl)
+
+graph_perpendicular_L_by_parallel(hcl)
+
+graph_parallel_L_by_perpendicular(hcl)</code></pre>
+</details>
+<br>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_info.png" alt="HCL Info" style="display:block; margin:auto;" />
+<p class="caption">
+HCL Info
+</p>
+</div>
+<p>This first set of graphs plots the C-L plane split by Hue values with both the perimeter and where it fits in the color space. We see these nice circles as the perimeter is cut moving along Hue values.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l_plane.png" alt="HCL C-L Plane by H cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL C-L Plane by H cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_c_l.png" alt="HCL C-L by H cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL C-L by H cuts
+</p>
+</div>
+</div>
+</div>
+<p>The next set shows H-L Curve split by different Chroma values. We’re also getting nice circles, unlike the xyL section.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l_curve.png" alt="HCL H-L Curve by C cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL H-L Curve by C cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_l.png" alt="HCL H-L by C cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL H-L by C cuts
+</p>
+</div>
+</div>
+</div>
+<p>The following graph breaks the trend of nice circles. Here we see teardrop shapes instead. The next few images pull this apart a little more.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c_plane.png" alt="HCL H-C Plane by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL H-C Plane by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_h_c.png" alt="HCL H-C by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL H-C by L cuts
+</p>
+</div>
+</div>
+</div>
+<p>Here we see the teardrop shapes in more detail. Because we created our “sphere” following polar coordinates, it doesn’t turn out as we might expect. This shape’s height is a function of what a sphere should be but augmented by the distance between Hue values increasing when Chroma increases. Notice that the center Chroma value is at 26. Not in the middle of the circular part, like at 30-ish.</p>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.png" alt="HCL Parallel-Perpendicular Distances by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL Parallel-Perpendicular Distances by L cuts
+</p>
+</div>
+<p>We also get a squished version for the image on the left. There are fewer cuts because the shape doesn’t reach out as far as the image on the right.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_per_l.png" alt="HCL Perpendicular Distance-L by Parallel Distance cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL Perpendicular Distance-L by Parallel Distance cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_l.png" alt="HCL Parallel Distance-L by Perpendicular Distance cuts" style="display:block; margin:auto;" />
+<p class="caption">
+HCL Parallel Distance-L by Perpendicular Distance cuts
+</p>
+</div>
+</div>
+</div>
+<p>It is a little unwieldy to compare the different main sections apart, so we’ll add them together in the next one.</p>
+<hr>
+<center>
+<h2>
+Compare Perimeters
+</h2>
+</center>
+<hr>
+<p>For the following images, the two sets we previously created are stuck together and then graphed to highlight the differences well.</p>
+<details>
+<summary>
+[Compare Code]
+</summary>
+<pre class="r"><code>##-------
+# Compare
+##-------
+compare &lt;- rbind(xyl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)],
+                 hcl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)]) %&gt;%
+  mutate(setting = c(rep(&#39;XYL&#39;, n_color), rep(&#39;HCL&#39;, n_color))) 
+
+# C L plane
+graph_C_L_by_H_comparison &lt;- function(color_points) {
+  ggplot(data = color_points, aes(C, L, col = setting)) +
+    geom_point(alpha = .5) +
+    facet_wrap(~ H_cut, nrow = 2) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;)
+}
+graph_C_L_by_H_comparison(compare)
+
+# H L curve
+graph_H_L_by_C_comparison &lt;- function(color_points, H_point) {
+  ggplot(data = color_points, 
+         aes((H + (180 - H_point)) %% 360, L, color = setting)) +
+    geom_point(alpha = .5) +
+    scale_x_reverse(&#39;H&#39;,
+                    labels = label_H_center(H_point = H_point)) +
+    facet_wrap(~ C_cut, nrow = 2) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;)
+}
+graph_H_L_by_C_comparison(compare, H_point)
+
+# H C plane
+graph_x_y_by_L_comparison &lt;- function(color_points, H_point) {
+  ggplot(data = color_points, aes(x, y, col = setting)) +
+    geom_abline(slope = c(tan(-67.5 * pi/180), 
+                          tan(-45 * pi/180), 
+                          tan(-22.5 * pi/180),
+                          0, 100000,
+                          tan(22.5 * pi/180), 
+                          tan(45 * pi/180), 
+                          tan(67.5 * pi/180)), 
+                intercept = 0,
+                color = &quot;white&quot;) +
+    geom_abline(slope = tan(H_point * pi/180), 
+                intercept = 0,
+                color = &quot;black&quot;) +
+    geom_point(alpha = .5) +
+    facet_wrap(~ L_cut, nrow = 2) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;,
+          axis.line=element_blank(), axis.text.x=element_blank(),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.title.x=element_blank(), axis.title.y=element_blank(),
+          panel.grid.major=element_blank(), panel.grid.minor=element_blank())
+}
+graph_x_y_by_L_comparison(compare, H_point)
+
+# C tangent plane
+graph_parallel_perpendicular_by_L_comparison &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = parallel_along_C_L,
+             y = perpendicular_from_C_L,
+             color = setting)) +
+    geom_point(alpha = .5) +
+    scale_y_continuous(&quot;Distance Perpendicular to C-L Plane&quot;,
+                       labels = abs) +
+    labs(x = &quot;Distance Parallel to C-L Plane&quot;) +
+    facet_wrap(~ L_cut, nrow = 2) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;)
+}
+graph_parallel_perpendicular_by_L_comparison(compare)
+
+graph_perpendicular_L_by_parallel_comparison &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = perpendicular_from_C_L,
+             y = L,
+             color = setting)) +
+    geom_point(alpha = .5) +
+    scale_x_continuous(&quot;Distance Perpendicular to C-L Plane&quot;, 
+            labels = abs) +
+    scale_y_continuous(labels = abs) +
+    facet_wrap(~ parallel_along_C_L_cut, nrow = 2) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;)
+}
+graph_perpendicular_L_by_parallel_comparison(compare)
+
+graph_parallel_L_by_perpendicular_comparison &lt;- function(color_points) {
+  ggplot(data = color_points, 
+         aes(x = parallel_along_C_L,
+             y = L,
+             color = setting)) +
+    geom_point(alpha = .5) +
+    labs(x = &quot;Distance Parallel to C-L Plane&quot;) +
+    facet_wrap(~ perpendicular_from_C_L_cut, nrow = 2,
+               labeller = as_labeller(label_perpendicular_from_C_L_cut)) +
+    coord_equal() +
+    scale_color_discrete(&quot;&quot;) +
+    theme(legend.position = &quot;bottom&quot;)
+}
+graph_parallel_L_by_perpendicular_comparison(compare)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, L) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, C) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)</code></pre>
+</details>
+<p>This section will have graphs with points from the xyL function in blue and HCL in orange. In the left image, we see the lop-sidedness of the xyL points with the circles of the HCL ones. Also, we can easily see that the XYL points stretch out to farther Hue values. Then we have the ovals for xyL and circles for HCL.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_c_l.png" alt="Comparison C-L by L cuts " style="display:block; margin:auto;" />
+<p class="caption">
+Comparison C-L by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_l.png" alt="Comparison H-L by C cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison H-L by C cuts
+</p>
+</div>
+</div>
+</div>
+<p>Then we can see the circles for xyL and teardrops for HCL.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_h_c.png" alt="Comparison H-C by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison H-C by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_per.png" alt="Comparison Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison Parallel-Perpendicular by L cuts
+</p>
+</div>
+</div>
+</div>
+<p>Finally, we get a comparison that confirms the HCL function results in squeezing the perimeter, not stretching it vertically.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_per_l.png" alt="Comparison Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison Perpendicular-L by Parallel cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_par_l.png" alt="Comparison Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison Parallel-L by Perpendicular cuts
+</p>
+</div>
+</div>
+</div>
+<p>Graphing the perimeters is nice to see what’s going on mathematically in the space, but the main result is in the end colors. So the last images of this main section show the direct colors of the samples.</p>
+<p>The first comparison has the samples sorted by Hue for the columns, then within each column, sorted by Luminance. I can’t tell a huge difference, but the Hue values for xyL seem to stretch slightly more than HCL, and HCL has a little more gray.</p>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples.png" alt="Comparison Samples H by L" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison Samples H by L
+</p>
+</div>
+<p>The second comparison has the samples sorted by Hue (like the first comparison), then sorted by Chroma. To me, this looks very different for having the same colors in the same columns. The HCL square is a little grayer at the bottom.</p>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/compare_samples2.png" alt="Comparison Samples H by C" style="display:block; margin:auto;" />
+<p class="caption">
+Comparison Samples H by C
+</p>
+</div>
+<p>For the final two main sections, we’ll change only the Chroma value. First, we’ll move everything closer to the center.</p>
+<hr>
+<center>
+<h2>
+Lower Chroma Value
+</h2>
+</center>
+<hr>
+<p>We’ll start by changing the base Chroma value from 26 to 16. Everything else is the same.</p>
+<details>
+<summary>
+[Lower Chroma Value Code]
+</summary>
+<pre class="r"><code>## Try lower value of C ----
+C_point &lt;- 16
+
+xyl &lt;- get_xyl_data(H_point, C_point, L_point, width, n_color)
+
+hcl &lt;- get_hcl_data(H_point, C_point, L_point, width, n_color)
+
+compare &lt;- rbind(xyl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)],
+                 hcl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)]) %&gt;%
+  mutate(setting = c(rep(&#39;XYL&#39;, n_color), rep(&#39;HCL&#39;, n_color))) 
+
+# C L plane
+graph_C_L_by_H_comparison(compare)
+
+# H L curve
+graph_H_L_by_C_comparison(compare, H_point)
+
+# H C plane
+graph_x_y_by_L_comparison(compare, H_point)
+
+# C tangent plane
+graph_parallel_perpendicular_by_L_comparison(compare)
+
+graph_perpendicular_L_by_parallel_comparison(compare)
+
+graph_parallel_L_by_perpendicular_comparison(compare)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, L) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, C) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)</code></pre>
+</details>
+<p><br></p>
+<p>From these graphs, we can see everything is exaggerated. For example, the first two images have similar circles for HCL, but xyL is breaking apart and getting stretched.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_c_l.png" alt="Lower C C-L by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C C-L by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_l.png" alt="Lower C H-L by C cuts " style="display:block; margin:auto;" />
+<p class="caption">
+Lower C H-L by C cuts
+</p>
+</div>
+</div>
+</div>
+<p>Then we see the circles for xyL, but HCL has a very tight teardrop shape.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_h_c.png" alt="Lower C H-C by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C H-C by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_per.png" alt="Lower C Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C Parallel-Perpendicular by L cuts
+</p>
+</div>
+</div>
+</div>
+<p>The same trend continues with the exaggeration for HCL.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_per_l.png" alt="Lower C Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C Perpendicular-L by Parallel cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_par_l.png" alt="Lower C Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C Parallel-L by Perpendicular cuts
+</p>
+</div>
+</div>
+</div>
+<p>Finally, we can compare the sampled colors directly.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples.png" alt="Lower C Samples H by L" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C Samples H by L
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_lower_samples2.png" alt="Lower C Samples H by C" style="display:block; margin:auto;" />
+<p class="caption">
+Lower C Samples H by C
+</p>
+</div>
+</div>
+</div>
+<hr>
+<center>
+<h2>
+Higher Chroma Value
+</h2>
+</center>
+<hr>
+<p>For the last main section, we’ll set Chroma to 75.</p>
+<details>
+<summary>
+[Higher Chroma Value Code]
+</summary>
+<pre class="r"><code>## Try higher value of C ----
+C_point &lt;- 75
+ 
+xyl &lt;- get_xyl_data(H_point, C_point, L_point, width, n_color)
+
+hcl &lt;- get_hcl_data(H_point, C_point, L_point, width, n_color)
+
+compare &lt;- rbind(xyl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)],
+                 hcl[, c(&#39;H&#39;, &#39;C&#39;, &#39;L&#39;, &#39;x&#39;, &#39;y&#39;, 
+                         &#39;H_cut&#39;, &#39;C_cut&#39;, &#39;L_cut&#39;, 
+                         &#39;perpendicular_from_C_L&#39;, &#39;parallel_along_C_L&#39;, 
+                         &#39;perpendicular_from_C_L_cut&#39;, &#39;parallel_along_C_L_cut&#39;,
+                         &#39;row_value&#39;, &#39;col_value&#39;, &#39;color_value&#39;)]) %&gt;%
+  mutate(setting = c(rep(&#39;XYL&#39;, n_color), rep(&#39;HCL&#39;, n_color))) 
+
+# C L plane
+graph_C_L_by_H_comparison(compare)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_c_l.png&quot;), 
+       width = 5, height = 4)
+
+# H L curve
+graph_H_L_by_C_comparison(compare, H_point)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_h_l.png&quot;), 
+       width = 5, height = 4)
+
+# H C plane
+graph_x_y_by_L_comparison(compare, H_point)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_h_c.png&quot;), 
+       width = 5, height = 4)
+
+# C tangent plane
+graph_parallel_perpendicular_by_L_comparison(compare)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_par_per.png&quot;), 
+       width = 5, height = 5)
+
+graph_perpendicular_L_by_parallel_comparison(compare)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_per_l.png&quot;), 
+       width = 5, height = 4)
+
+graph_parallel_L_by_perpendicular_comparison(compare)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_par_l.png&quot;), 
+       width = 5, height = 4)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, L) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_samples.png&quot;), 
+       width = 5, height = 2.5)
+
+compare &lt;- compare %&gt;%
+  group_by(setting) %&gt;%
+  arrange((180 - abs(abs(H - H_point) - 180)) * 
+            sign(180 - abs(H - H_point)) * sign(H - H_point)) %&gt;%
+  mutate(col_value = ceiling(row_number() / sqrt(n_color))) %&gt;%
+  arrange(col_value, C) %&gt;%
+  group_by(setting, col_value) %&gt;%
+  mutate(row_value = row_number())
+
+ggplot(data = compare,
+       aes(x = col_value,
+           y = row_value,
+           fill = color_value)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_identity() +
+  theme_void() +
+  facet_grid(~setting)
+ggsave(here::here(&quot;output&quot;, &quot;color_compare&quot;, &quot;C_higher_samples2.png&quot;), 
+       width = 5, height = 2.5)</code></pre>
+</details>
+<p><br></p>
+<p>This time, the results have a different shape. Now, HCL stretches out farther than xyL (but still in a circle).</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_c_l.png" alt="Higher C C-L by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C C-L by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_l.png" alt="Higher C H-L by C cuts " style="display:block; margin:auto;" />
+<p class="caption">
+Higher C H-L by C cuts
+</p>
+</div>
+</div>
+</div>
+<p>The graphs from above show the stretching well. Instead of the teardrop shape, we now have ovals. At some point in increasing the Chroma value, the HCL function surpasses xyL.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_h_c.png" alt="Higher C H-C by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C H-C by L cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_per.png" alt="Higher C Parallel-Perpendicular by L cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C Parallel-Perpendicular by L cuts
+</p>
+</div>
+</div>
+</div>
+<p>We see the same trend continue here.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_per_l.png" alt="Higher C Perpendicular-L by Parallel cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C Perpendicular-L by Parallel cuts
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_par_l.png" alt="Higher C Parallel-L by Perpendicular cuts" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C Parallel-L by Perpendicular cuts
+</p>
+</div>
+</div>
+</div>
+<p>And finally, we can compare the examples again.</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 1px;">
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples.png" alt="Higher C Samples H by L" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C Samples H by L
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/C_higher_samples2.png" alt="Higher C Samples H by C" style="display:block; margin:auto;" />
+<p class="caption">
+Higher C Samples H by C
+</p>
+</div>
+</div>
+</div>
+<p>I think at the end of the post, I’m supposed to say one is better than the other, but I think they’re just different. It really depends on what you’re looking for in selecting colors. Looking at the colors is the best way to do that, but the other graphs help explain what is happening and determine the next steps.</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>If you understand the difference between polar and Cartesian coordinates pretty well, this blog post will be obvious to you. But I’m bad at math and needed to see a lot of graphs to understand what was happening. So I figured I’d throw this in a blog post.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>

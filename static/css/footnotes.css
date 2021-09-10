@@ -1,0 +1,11 @@
+/* So superscript doesn't affect line heights */
+sup {
+    line-height: 0;
+    font-size: 0.8em;
+    vertical-align: super;
+}
+
+/* Adds some space when going back to text from footnote so the header doesn't cover it */
+.footnote-ref {
+  scroll-margin-top: 75px;
+}
