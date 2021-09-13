@@ -2,9 +2,9 @@
 title: Choosing Nearby Colors Part 1
 author: Tyler
 date: '2021-08-09'
-slug: index.en-us
+slug: nearby_colors_part_1
 summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space.
-thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png
+thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg
 thumbnailImagePosition: "right"
 ---
 
@@ -96,8 +96,8 @@ graph_C_L_plane <- function(C_L_plane, color_points, color_hex) {
 }
 graph_C_L_plane(C_L_plane, color_points, color_hex)
 ```
-```{r color_c_l_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_l_plane.png', error = FALSE)
+```{r color_c_l_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Base Color: C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_l_plane.jpeg', error = FALSE)
 ```
 
 We can see as the Luminance increases, the shades move from darker to lighter, and as Chroma moves out from 0, the color is more intense. The `get_C_L_plane` function returns a data set with points on that plane. For this blog post, functions that start with "get" return points we're going to graph while functions that start with "graph" display them appropriately. This plane actually extends to the left, where the H value would be the current H + 180. I'm not graphing that section because this project will keep values close to the base color without changing the Hue too much.
@@ -147,8 +147,8 @@ graph_H_L_curve <- function(H_L_curve, color_points, color_hex, H_point) {
 graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)
 ```
 </details> <br>
-```{r color_h_l_curve_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_l_curve.png', error = FALSE)
+```{r color_h_l_curve_image, eval = TRUE, echo = FALSE, fig.cap = "Base Color: H-L Curve"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_l_curve.jpeg', error = FALSE)
 ```
 
 You can see the odd shape of the HCL color space where the different Hues don't stretch their Chroma values out at different Luminance values. This is the only graph that shows a flattened curve. Everything else displays a sharp slice. For all the H-L curve graphs, the Hue value is rotated to the center.
@@ -191,12 +191,10 @@ graph_H_C_plane <- function(H_C_plane, color_points, color_hex) {
                 direction = -1)
 }
 graph_H_C_plane(H_C_plane, color_points, color_hex)
-ggsave(here::here("output", "color_investigation", "h_c_plane.png"), 
-       width = 5, height = 5)
 ```
 </details><br>
-```{r color_h_c_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png', error = FALSE)
+```{r color_h_c_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Base Color: H-C Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg', error = FALSE)
 ```
 
 We can see the different colors as Hue moves around a circle and their increased intensity as Chroma moves out to the edges. The shape is not circular because the HCL color space isn't.
@@ -251,7 +249,7 @@ ggplot(data = H_C_plane,
 ```
 </details><br>
 ```{r c_tangent_setup_image, eval = TRUE, echo = FALSE, fig.cap = "C Tangent Plane setup"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane_setup.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane_setup.jpeg', error = FALSE)
 ```
 
 Chroma and Luminance move in straight lines, but Hue is circular. The image shows this with the white circle where Chroma and Luminance are constant, but Hue moves around the circle. This means looking at graphs of shapes can be distorted when graphing them flat. So we might want to see what happens as we move away from our specific color in a straight line perpendicular to the C-L Plane. That's the black line. We're going to cut the HCL space from top to bottom along this line.
@@ -300,8 +298,8 @@ graph_C_tangent_plane <- function(C_tangent_plane, color_points, color_hex) {
 graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
 ```
 </details><br>
-```{r color_c_tangent_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Specific Color: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane.png', error = FALSE)
+```{r color_c_tangent_plane_image, eval = TRUE, echo = FALSE, fig.cap = "Base Color: Plane Perpendicular to C-L Plane"}
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane.jpeg', error = FALSE)
 ```
 
 This shows the plane perpendicular to the C-L Plane at C = 60. A horizontal line drawn at the point on this image matches where the black intersects the H-C plane in the previous graph. This image isn't super helpful here, but it will be when we check shapes later.
@@ -391,7 +389,7 @@ p1 + p2
 ```
 </details><br>
 ```{r sphere_info_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: Base Color and Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_info.jpeg', error = FALSE)
 ```
 
 We can reuse the previous functions to graph the planes with our sphere in white to get the outline shape by using the new points as the `color_points` parameter. Then we can just graph the new points to see how they look. For example, in the following image, the left side has the previous C-L Plane image with points from the sphere blocked out in white. However, the right side has those same points with the correct color.
@@ -416,7 +414,7 @@ p1 + p2
 ```
 </details><br>
 ```{r sphere_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_c_l.jpeg', error = FALSE)
 ```
 
 Now, we can continue with the others, starting with the H-L Curve. It's hard to tell in this image, but the shape isn't a perfect circle. It's slightly off because the Hue values curve through the sphere, then that intersection is flattened in the graph. This distortion is more evident for different values.
@@ -443,7 +441,7 @@ p1 + p2
 ```
 </details><br>
 ```{r sphere_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_l.jpeg', error = FALSE)
 ```
 
 The next shape is a perfect circle because the plane perpendicular to the C-L Plane is already flat.
@@ -470,7 +468,7 @@ p1 + p2
 ```
 </details><br>
 ```{r sphere_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_p_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_p_c_l.jpeg', error = FALSE)
 ```
 
 The last image is of the H-C Plane and the sphere based on x-y coordinates. The black line on the right-side is at H = 112.
@@ -507,12 +505,10 @@ graph_x_y <- function(color_points, H_point) {
 p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 <- graph_x_y(color_points, H_point)
 p1 + p2
-ggsave(here::here("output", "color_investigation", "sphere_h_c.png"), 
-       width = 5, height = 2.5)
 ```
 </details><br>
 ```{r sphere_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Sphere: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_c.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_c.jpeg', error = FALSE)
 ```
 
 Now to expand this technique out a little more, we can stretch the sphere in different ways.
@@ -576,7 +572,7 @@ p1 + p2
 ```
 </details><br>
 ```{r ellipse_info_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: Base Color and Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_info.jpeg', error = FALSE)
 ```
 
 In this section's images, we can see how the sphere gets stretched. If you're standing in the center of the HCL color space and face the point, the sphere was extended to your left and right by the `H_radius` amount, to and away from you by `C_radius`, and vertically by `L_radius.`
@@ -590,7 +586,7 @@ p1 + p2
 ```
 </details><br>
 ```{r ellipse_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_c_l.jpeg', error = FALSE)
 ```
 
 In the previous image, we can see the ellipse is `2 * L_radius` tall and `2 * C_radius` wide. In the following image, the ellipse is also `2 * L_radius` tall. It changed horizontally but not by `2 * H_radius`. This image displays the `C_point` radius circles as H changes through the HCL color space, so the distance of stretching is a function of the arc length of those circles. The next image has a width of `2 * H_radius`.
@@ -604,7 +600,7 @@ p1 + p2
 ```
 </details><br>
 ```{r ellipse_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_l.jpeg', error = FALSE)
 ```
 
 <details>
@@ -616,7 +612,7 @@ p1 + p2
 ```
 </details><br>
 ```{r ellipse_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_p_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_p_c_l.jpeg', error = FALSE)
 ```
 
 Finally, we see the H-C plane with an ellipse with one axis `2 * C_radius` long and the other of `2 * H_radius`. It's pointing to the center, so which axis appears as height and width would change as H turns.
@@ -630,7 +626,7 @@ p1 + p2
 ```
 </details><br>
 ```{r ellipse_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Ellipse: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_c.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_c.jpeg', error = FALSE)
 ```
 
 While we're transforming the original sphere, we can add in tilting.
@@ -708,7 +704,7 @@ p1 + p2
 ```
 </details><br>
 ```{r tilted_ellipse_info_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: Base Color and Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_info.jpeg', error = FALSE)
 ```
 
 The following image shows the tilt the best. We can see that it now points to the tip of the triangle.
@@ -722,7 +718,7 @@ p1 + p2
 ```
 </details><br>
 ```{r tilted_ellipse_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_c_l.jpeg', error = FALSE)
 ```
 
 The right side isn't quite symmetric across a horizontal line in the middle in the following image. The top is a little thinner than the bottom, so it's more of an egg shape. That happens because the H values curve through the ellipse and flatten into this image. Different H values are obtained for different C values, and C and L are correlated in this shape. So in this image, as L changes, C also changes, which affects the H values reached by the edges. This graph won't always result in an egg shape, but it does in this case.
@@ -736,7 +732,7 @@ p1 + p2
 ```
 </details><br>
 ```{r tilted_ellipse_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_l.jpeg', error = FALSE)
 ```
 
 The next one is symmetric across a horizontal line in the middle. Checking this feature is one of the main reasons for this graph.
@@ -750,7 +746,7 @@ p1 + p2
 ```
 </details><br>
 ```{r tilted_ellipse_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_p_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_p_c_l.jpeg', error = FALSE)
 ```
 
 Finally, we see the H-C Plane. The length along the C-L Plane line is a function of the radii and tilt amount, but the perpendicular length is just `perpendicular_C_L_radius`.
@@ -764,7 +760,7 @@ p1 + p2
 ```
 </details><br>
 ```{r tilted_ellipse_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Tilted Ellipse: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_c.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_c.jpeg', error = FALSE)
 ```
 
 So far, this setup has a lot of flexibility but is also fragile. So, we'll bulk up the sampling function.
@@ -883,7 +879,7 @@ p3 <- graph_sample(color_points_tilted_ellipse)
 p1 + p2 + p3
 ```
 ```{r compare_info_image, eval = TRUE, echo = FALSE, fig.cap = "Compare: Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/compare_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/compare_info.jpeg', error = FALSE)
 ```
 
 Here, we can see the differences in samples based on the different parameters. By changing the parameters, we can get a variety of color sampling, even when starting with the same base point. The rest of the graphs can be created for comparing the outputs, but they aren't that interesting since they're just repeats of the previous image.
@@ -937,7 +933,7 @@ p1 + p2
 ```
 </details><br>
 ```{r outside_edge_info_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: Base Color and Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_info.jpeg', error = FALSE)
 ```
 
 The following image shows that the ellipse should go outside the bounds, but there aren't any color values for those points. So, the ellipse is clipped off by that bound. However, the square on the right in the previous image is filled in completely. If we started with a sample of the size we wanted at the end, the clipped points would be missing. The previous image worked because the original set of points was bigger, clipped, then sampled to the desired amount.
@@ -951,7 +947,7 @@ p1 + p2
 ```
 </details><br>
 ```{r outside_edge_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_c_l.jpeg', error = FALSE)
 ```
 
 The next few images are the same kind that we have seen previously.
@@ -965,7 +961,7 @@ p1 + p2
 ```
 </details><br>
 ```{r outside_edge_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_l.jpeg', error = FALSE)
 ```
 
 <details>
@@ -974,12 +970,10 @@ knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en
 p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
 p2 <- graph_perpendicular_from_C_L(color_points)
 p1 + p2
-ggsave(here::here("output", "color_investigation", ""), 
-       width = 5, height = 1.5)
 ```
 </details><br>
 ```{r outside_edge_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_p_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_p_c_l.jpeg', error = FALSE)
 ```
 
 <details>
@@ -988,12 +982,10 @@ knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en
 p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 <- graph_x_y(color_points, H_point)
 p1 + p2
-ggsave(here::here("output", "color_investigation", ""), 
-       width = 5, height = 3)
 ```
 </details><br>
 ```{r outside_edge_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Outside Edge: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_c.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_c.jpeg', error = FALSE)
 ```
 
 One important detail to catch in the above image is the sharp end on the top right. This clipping occurs because we check that the image is symmetric across Hue = `H_point`. If we didn't have that check, the right side would stretch up farther to match the boundary of the H-C Plane on the left side.
@@ -1039,7 +1031,7 @@ p1 + p2
 ```
 </details><br>
 ```{r inside_edge_info_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: Base Color and Sample Points"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_info.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_info.jpeg', error = FALSE)
 ```
 
 <details>
@@ -1051,7 +1043,7 @@ p1 + p2
 ```
 </details><br>
 ```{r inside_edge_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_c_l.jpeg', error = FALSE)
 ```
 
 The H-L Curve is very different from previous ones because of how close to the center the `C_point` is. Values close to the center span a larger region of Hue values than compared to points farther away to the outside, which creates a new shape.
@@ -1065,7 +1057,7 @@ p1 + p2
 ```
 </details><br>
 ```{r inside_edge_h_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: H-L Curve"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_l.jpeg', error = FALSE)
 ```
 
 <details>
@@ -1074,12 +1066,10 @@ knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en
 p1 <- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
 p2 <- graph_perpendicular_from_C_L(color_points)
 p1 + p2
-ggsave(here::here("output", "color_investigation", ""), 
-       width = 5, height = 1.5)
 ```
 </details><br>
 ```{r inside_edge_p_c_l_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: Plane Perpendicular to C-L Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_p_c_l.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_p_c_l.jpeg', error = FALSE)
 ```
 
 For the final image, we can see that the H_bound cuts up the ellipse. The boundary prevents the ellipse from stretching across the HCL color space's middle.
@@ -1090,12 +1080,10 @@ For the final image, we can see that the H_bound cuts up the ellipse. The bounda
 p1 <- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 <- graph_x_y(color_points, H_point)
 p1 + p2
-ggsave(here::here("output", "color_investigation", ""), 
-       width = 5, height = 3)
 ```
 </details><br>
 ```{r inside_edge_h_c_image, eval = TRUE, echo = FALSE, fig.cap = "Inside Edge: H-C Plane"}
-knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_c.png', error = FALSE)
+knitr::include_graphics('/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_c.jpeg', error = FALSE)
 ```
 
 <hr>

@@ -4,7 +4,7 @@ author: Tyler
 date: '2021-08-09'
 slug: index.en-us
 summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space.
-thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png
+thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg
 thumbnailImagePosition: "right"
 ---
 
@@ -84,9 +84,9 @@ graph_C_L_plane &lt;- function(C_L_plane, color_points, color_hex) {
 }
 graph_C_L_plane(C_L_plane, color_points, color_hex)</code></pre>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_l_plane.png" alt="Specific Color: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_l_plane.jpeg" alt="Base Color: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
-Specific Color: C-L Plane
+Base Color: C-L Plane
 </p>
 </div>
 <p>We can see as the Luminance increases, the shades move from darker to lighter, and as Chroma moves out from 0, the color is more intense. The <code>get_C_L_plane</code> function returns a data set with points on that plane. For this blog post, functions that start with “get” return points we’re going to graph while functions that start with “graph” display them appropriately. This plane actually extends to the left, where the H value would be the current H + 180. I’m not graphing that section because this project will keep values close to the base color without changing the Hue too much.</p>
@@ -135,9 +135,9 @@ graph_H_L_curve(H_L_curve, color_points, color_hex, H_point)</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_l_curve.png" alt="Specific Color: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_l_curve.jpeg" alt="Base Color: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
-Specific Color: H-L Curve
+Base Color: H-L Curve
 </p>
 </div>
 <p>You can see the odd shape of the HCL color space where the different Hues don’t stretch their Chroma values out at different Luminance values. This is the only graph that shows a flattened curve. Everything else displays a sharp slice. For all the H-L curve graphs, the Hue value is rotated to the center.</p>
@@ -179,14 +179,14 @@ graph_H_C_plane &lt;- function(H_C_plane, color_points, color_hex) {
                 direction = -1)
 }
 graph_H_C_plane(H_C_plane, color_points, color_hex)
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;h_c_plane.png&quot;), 
+ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;h_c_plane.jpeg&quot;), 
        width = 5, height = 5)</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.png" alt="Specific Color: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg" alt="Base Color: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
-Specific Color: H-C Plane
+Base Color: H-C Plane
 </p>
 </div>
 <p>We can see the different colors as Hue moves around a circle and their increased intensity as Chroma moves out to the edges. The shape is not circular because the HCL color space isn’t.</p>
@@ -240,7 +240,7 @@ ggplot(data = H_C_plane,
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane_setup.png" alt="C Tangent Plane setup" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane_setup.jpeg" alt="C Tangent Plane setup" style="display:block; margin:auto;" />
 <p class="caption">
 C Tangent Plane setup
 </p>
@@ -292,9 +292,9 @@ graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane.png" alt="Specific Color: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/c_tangent_plane.jpeg" alt="Base Color: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
-Specific Color: Plane Perpendicular to C-L Plane
+Base Color: Plane Perpendicular to C-L Plane
 </p>
 </div>
 <p>This shows the plane perpendicular to the C-L Plane at C = 60. A horizontal line drawn at the point on this image matches where the black intersects the H-C plane in the previous graph. This image isn’t super helpful here, but it will be when we check shapes later.</p>
@@ -381,7 +381,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_info.png" alt="Sphere: Base Color and Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_info.jpeg" alt="Sphere: Base Color and Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Sphere: Base Color and Sample Points
 </p>
@@ -408,7 +408,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_c_l.png" alt="Sphere: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_c_l.jpeg" alt="Sphere: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Sphere: C-L Plane
 </p>
@@ -437,7 +437,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_l.png" alt="Sphere: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_l.jpeg" alt="Sphere: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
 Sphere: H-L Curve
 </p>
@@ -466,7 +466,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_p_c_l.png" alt="Sphere: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_p_c_l.jpeg" alt="Sphere: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Sphere: Plane Perpendicular to C-L Plane
 </p>
@@ -505,12 +505,12 @@ Sphere: Plane Perpendicular to C-L Plane
 p1 &lt;- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 &lt;- graph_x_y(color_points, H_point)
 p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;sphere_h_c.png&quot;), 
+ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;sphere_h_c.jpeg&quot;), 
        width = 5, height = 2.5)</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_c.png" alt="Sphere: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/sphere_h_c.jpeg" alt="Sphere: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Sphere: H-C Plane
 </p>
@@ -575,7 +575,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_info.png" alt="Ellipse: Base Color and Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_info.jpeg" alt="Ellipse: Base Color and Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Ellipse: Base Color and Sample Points
 </p>
@@ -591,7 +591,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_c_l.png" alt="Ellipse: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_c_l.jpeg" alt="Ellipse: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Ellipse: C-L Plane
 </p>
@@ -607,7 +607,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_l.png" alt="Ellipse: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_l.jpeg" alt="Ellipse: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
 Ellipse: H-L Curve
 </p>
@@ -622,7 +622,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_p_c_l.png" alt="Ellipse: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_p_c_l.jpeg" alt="Ellipse: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Ellipse: Plane Perpendicular to C-L Plane
 </p>
@@ -638,7 +638,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_c.png" alt="Ellipse: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/ellipse_h_c.jpeg" alt="Ellipse: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Ellipse: H-C Plane
 </p>
@@ -715,7 +715,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_info.png" alt="Tilted Ellipse: Base Color and Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_info.jpeg" alt="Tilted Ellipse: Base Color and Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Tilted Ellipse: Base Color and Sample Points
 </p>
@@ -731,7 +731,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_c_l.png" alt="Tilted Ellipse: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_c_l.jpeg" alt="Tilted Ellipse: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Tilted Ellipse: C-L Plane
 </p>
@@ -747,7 +747,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_l.png" alt="Tilted Ellipse: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_l.jpeg" alt="Tilted Ellipse: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
 Tilted Ellipse: H-L Curve
 </p>
@@ -763,7 +763,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_p_c_l.png" alt="Tilted Ellipse: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_p_c_l.jpeg" alt="Tilted Ellipse: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Tilted Ellipse: Plane Perpendicular to C-L Plane
 </p>
@@ -779,7 +779,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_c.png" alt="Tilted Ellipse: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/tilted_ellipse_h_c.jpeg" alt="Tilted Ellipse: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Tilted Ellipse: H-C Plane
 </p>
@@ -895,7 +895,7 @@ p2 &lt;- graph_sample(color_points_ellipse)
 p3 &lt;- graph_sample(color_points_tilted_ellipse)
 p1 + p2 + p3</code></pre>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/compare_info.png" alt="Compare: Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/compare_info.jpeg" alt="Compare: Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Compare: Sample Points
 </p>
@@ -950,7 +950,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_info.png" alt="Outside Edge: Base Color and Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_info.jpeg" alt="Outside Edge: Base Color and Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Outside Edge: Base Color and Sample Points
 </p>
@@ -966,7 +966,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_c_l.png" alt="Outside Edge: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_c_l.jpeg" alt="Outside Edge: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Outside Edge: C-L Plane
 </p>
@@ -982,7 +982,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_l.png" alt="Outside Edge: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_l.jpeg" alt="Outside Edge: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
 Outside Edge: H-L Curve
 </p>
@@ -999,7 +999,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_p_c_l.png" alt="Outside Edge: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_p_c_l.jpeg" alt="Outside Edge: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Outside Edge: Plane Perpendicular to C-L Plane
 </p>
@@ -1016,7 +1016,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_c.png" alt="Outside Edge: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/outside_edge_h_c.jpeg" alt="Outside Edge: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Outside Edge: H-C Plane
 </p>
@@ -1060,7 +1060,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_info.png" alt="Inside Edge: Base Color and Sample Points" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_info.jpeg" alt="Inside Edge: Base Color and Sample Points" style="display:block; margin:auto;" />
 <p class="caption">
 Inside Edge: Base Color and Sample Points
 </p>
@@ -1075,7 +1075,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_c_l.png" alt="Inside Edge: C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_c_l.jpeg" alt="Inside Edge: C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Inside Edge: C-L Plane
 </p>
@@ -1091,7 +1091,7 @@ p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_l.png" alt="Inside Edge: H-L Curve" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_l.jpeg" alt="Inside Edge: H-L Curve" style="display:block; margin:auto;" />
 <p class="caption">
 Inside Edge: H-L Curve
 </p>
@@ -1108,7 +1108,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_p_c_l.png" alt="Inside Edge: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_p_c_l.jpeg" alt="Inside Edge: Plane Perpendicular to C-L Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Inside Edge: Plane Perpendicular to C-L Plane
 </p>
@@ -1126,7 +1126,7 @@ ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&qu
 </details>
 <br>
 <div class="figure">
-<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_c.png" alt="Inside Edge: H-C Plane" style="display:block; margin:auto;" />
+<img src="/post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/inside_edge_h_c.jpeg" alt="Inside Edge: H-C Plane" style="display:block; margin:auto;" />
 <p class="caption">
 Inside Edge: H-C Plane
 </p>
