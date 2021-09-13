@@ -180,7 +180,7 @@ canonifyurls = true
 	 
    [[params.customJS]]
      src = "js/python.min.js"  
-     
+   
   # Sharing options
   # Comment and uncomment to enable or disable sharing options
   # If you wanna add a sharing option, read user documentation :
