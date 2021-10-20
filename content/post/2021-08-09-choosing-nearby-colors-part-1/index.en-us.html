@@ -2,10 +2,14 @@
 title: Choosing Nearby Colors Part 1
 author: Tyler
 date: '2021-08-09'
-slug: index.en-us
+tags:
+  - R
+  - Generative Art
+slug: nearby_colors_part_1
 summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space.
 thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg
-thumbnailImagePosition: "right"
+thumbnailImagePosition: left
+showTags: true
 ---
 
 <script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
@@ -178,9 +182,7 @@ graph_H_C_plane &lt;- function(H_C_plane, color_points, color_hex) {
     coord_polar(start = 270 * pi / 180,
                 direction = -1)
 }
-graph_H_C_plane(H_C_plane, color_points, color_hex)
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;h_c_plane.jpeg&quot;), 
-       width = 5, height = 5)</code></pre>
+graph_H_C_plane(H_C_plane, color_points, color_hex)</code></pre>
 </details>
 <br>
 <div class="figure">
@@ -504,9 +506,7 @@ Sphere: Plane Perpendicular to C-L Plane
 
 p1 &lt;- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 &lt;- graph_x_y(color_points, H_point)
-p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;sphere_h_c.jpeg&quot;), 
-       width = 5, height = 2.5)</code></pre>
+p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
@@ -993,9 +993,7 @@ Outside Edge: H-L Curve
 </summary>
 <pre class="r"><code>p1 &lt;- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
 p2 &lt;- graph_perpendicular_from_C_L(color_points)
-p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&quot;), 
-       width = 5, height = 1.5)</code></pre>
+p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
@@ -1010,9 +1008,7 @@ Outside Edge: Plane Perpendicular to C-L Plane
 </summary>
 <pre class="r"><code>p1 &lt;- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 &lt;- graph_x_y(color_points, H_point)
-p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&quot;), 
-       width = 5, height = 3)</code></pre>
+p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
@@ -1102,9 +1098,7 @@ Inside Edge: H-L Curve
 </summary>
 <pre class="r"><code>p1 &lt;- graph_C_tangent_plane(C_tangent_plane, color_points, color_hex)
 p2 &lt;- graph_perpendicular_from_C_L(color_points)
-p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&quot;), 
-       width = 5, height = 1.5)</code></pre>
+p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
@@ -1120,9 +1114,7 @@ Inside Edge: Plane Perpendicular to C-L Plane
 </summary>
 <pre class="r"><code>p1 &lt;- graph_H_C_plane(H_C_plane, color_points, color_hex)
 p2 &lt;- graph_x_y(color_points, H_point)
-p1 + p2
-ggsave(here::here(&quot;output&quot;, &quot;color_investigation&quot;, &quot;&quot;), 
-       width = 5, height = 3)</code></pre>
+p1 + p2</code></pre>
 </details>
 <br>
 <div class="figure">
