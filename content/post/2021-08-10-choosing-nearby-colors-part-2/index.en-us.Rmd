@@ -2,10 +2,14 @@
 title: Choosing Nearby Colors Part 2
 author: Tyler
 date: '2021-08-10'
+tags:
+  - R
+  - Generative Art
 slug: nearby_colors_part_2
 summary: Follow-up from previous post using the HCL coordinates directly.
 thumbnailImage: /post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.jpeg
-thumbnailImagePosition: "bottom"
+thumbnailImagePosition: left
+showTags: true
 ---
 
 ```{r setup, include=FALSE}

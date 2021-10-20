@@ -2,10 +2,15 @@
 title: SQL Server's Machine Learning Services Presentation
 author: Tyler
 date: '2021-06-28'
+tags:
+  - R
+  - SQL
+  - Presentations
 slug: sql_mls
 summary: "Presentation write-up on SQL Server's Machine Learning Services"
 thumbnailImage: /post/2021-06-28-sql-server-s-machine-learning-services-presentation/index.en-us_files/slide_1.png
-thumbnailImagePosition: "right"
+thumbnailImagePosition: left
+showTags: true
 ---
 
 ```{r setup, include=FALSE}
