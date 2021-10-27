@@ -1,0 +1,60 @@
+---
+title: Penrose Tiling
+author: R package build
+date: '2021-10-25'
+slug: index.en-us
+tags:
+  - R
+  - Generative Art
+summary: R package for Penrose tiling patterns 
+thumbnailImage: /post/2021-10-25-penrose-tiling/index.en-us_files/penrosetiling.png
+thumbnailImagePosition: left
+showTags: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_knit$set(bookdown.internal.label = FALSE)
+knitr::opts_chunk$set(out.extra = 'style="display:block; margin:auto;"')  # center
+```
+
+<hr>
+<center><h2>R package</h2></center>
+<hr>
+
+I recently worked on a generative art project around [Penrose tiling](https://en.wikipedia.org/wiki/Penrose_tiling){target="_blank"} patterns. As I worked through the functions, I decided to throw them into a package, `penrosetiling`. You can find it [here](https://williamtylerbradley.github.io/penrosetiling/){target="_blank"}. This package has base data sets and functions to substitute the pattern down through the shapes. There are also vignettes to help get started, use `purrr` for looping, and clean up images. Hopefully, it will work for you.
+
+```{r penrosetiling, eval = TRUE, echo = FALSE, fig.cap = "penrosetiling hex sticker", out.extra='height = 175px; style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/penrosetiling.png', error = FALSE)
+```
+
+<hr>
+<center><h2>Outputs</h2></center>
+<hr>
+
+The outputs from the project are displayed below. The code can be found [here](https://github.com/WilliamTylerBradley/penrosetiling_art){target="_blank"}.
+
+</br>
+```{r variations1, eval = TRUE, echo = FALSE, fig.cap = "Variations 1"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/variations1.png', error = FALSE)
+```
+</br>
+```{r variations2, eval = TRUE, echo = FALSE, fig.cap = "Variations 2"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/variations2.png', error = FALSE)
+```
+</br>
+```{r cathedral, eval = TRUE, echo = FALSE, fig.cap = "Cathedral"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/cathedral.jpeg', error = FALSE)
+```
+</br>
+```{r warnings, eval = TRUE, echo = FALSE, fig.cap = "Warnings"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/warnings.png', error = FALSE)
+```
+</br>
+```{r vacay, eval = TRUE, echo = FALSE, fig.cap = "Vacay"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/vacay.jpeg', error = FALSE)
+```
+</br>
+```{r sbwn, eval = TRUE, echo = FALSE, fig.cap = "SBWN (Standard Black and White Noise)"}
+knitr::include_graphics('/post/2021-10-25-penrose-tiling/index.en-us_files/sbwn.gif', error = FALSE)
+```
