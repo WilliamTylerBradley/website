@@ -6,7 +6,7 @@ tags:
   - R
   - Generative Art
 slug: bertrand_paradox
-summary: Generative art based on the Bertrand Paradox.
+summary: Generative art based on the Bertrand Paradox
 thumbnailImage: /post/2021-08-12-bertrand-paradox/index.en-us_files/thumbnail.jpeg
 thumbnailImagePosition: left
 showTags: true

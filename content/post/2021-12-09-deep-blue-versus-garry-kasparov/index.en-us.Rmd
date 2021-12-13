@@ -1,0 +1,59 @@
+---
+title: Deep Blue versus Garry Kasparov
+author: Tyler
+date: '2021-12-09'
+tags:
+  - Generative Art
+  - R
+slug: index.en-us
+summary: Generative art based on chess games
+thumbnailImage: /post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/DeepBlueVersusGarryKasparov1996.png
+thumbnailImagePosition: left
+showTags: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_knit$set(bookdown.internal.label = FALSE)
+knitr::opts_chunk$set(out.extra = 'style="display:block; margin:auto;"')  # center
+```
+
+I recently finished a small generative art project on [Deep Blue versus Garry Kasparov](https://en.wikipedia.org/wiki/Deep_Blue_versus_Garry_Kasparov){target="_blank"}. Creating a new visualization on the chess games and playing around with colors were the main goals. In the end, I think it turned out ok, but it still needs more work. (For example, it doesn't handle pawn promotion well.)
+
+The idea came out of watching [*The Queen's Gambit*](https://en.wikipedia.org/wiki/The_Queen%27s_Gambit_(miniseries)) last year. There's a cool scene where the main character says "Chess isn't always competitive ... chess can also be beautiful." I thought that was interesting because the series happened in 1950's/1960's, before computers were winning chess. So today the most competitive setup involves computers but that still leaves room for the beautiful part. I think there a neat comparison between this and generative art. This project uses moves from Deep Blue for the generative aspect. The data connects to when computers started taking over competitively. Also, I think using chess data for generative art is neat for a found materials kind of project.
+
+Each of the games are in a grid layout. The pieces are layed out horizontally. The games' actions move vertically down through the grid with pieces dropping out as they are captured. Captures are represented by horizontal lines connecting the pieces. The location on the board is given by the color. Rank follows luminance (white is lighter, black is darker) while files move along hue/chroma in the HCL color space.
+
+The code uses the [`rchess` package](http://jkunst.com/rchess/){target="_blank"} with game files from [chessgames.com](https://www.chessgames.com){target="_blank"}. `data.table` handles the data manipulation while `ggplot2` does the graphing. The code can be found here.
+
+Here is the piece order. This shows the first row in each grid (notices the notches separating the types). The order starts in the middle of the king and queen, works outward, moves to the pawns, works inwards, then reverses to the other side. The two kings end up on the outside edges. The winning side's king will drop down at the final row. If there is no winner, the kings end on the same row.
+
+```{r piece_order, eval = TRUE, echo = FALSE, fig.cap = "Piece Order", out.extra='style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/piece_order.png', error = FALSE)
+```
+
+A different grid of colors exists for each of the 14 games (seven for 1996 and seven for 1997). The colors sets are 8 by 8 grids that maximized the distance between points in the HCL color space as they move around the hue values. 
+
+```{r colors_1, eval = TRUE, echo = FALSE, fig.cap = "Color Grids", out.extra='style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/colors_1.jpeg', error = FALSE)
+```
+
+The following graph shows all the colors with their hue/chroma values. I found moving chroma out as hue moved gave some distinction between the sides of the board without creating too much of a striping effect.
+
+```{r colors_2, eval = TRUE, echo = FALSE, fig.cap = "Colors' Hue and Chroma Values", out.extra='style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/colors_2.jpeg', error = FALSE)
+```
+
+Finally, here are the two works. The background colors are colors in the middle of the grid rotated around the space.
+
+```{r set_1996, eval = TRUE, echo = FALSE, fig.cap = "1996 Games", out.extra='style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/DeepBlueVersusGarryKasparov1996.png', error = FALSE)
+```
+
+<br>
+
+```{r set_1997, eval = TRUE, echo = FALSE, fig.cap = "1997 Games", out.extra='style="display:block; margin:auto;"'}
+knitr::include_graphics('/post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/DeepBlueVersusGarryKasparov1997.png', error = FALSE)
+```
+
+You can see how the number of turns affects the length of the grids, how some pieces (some pawns) are taken more often than others, and how there a lot of exchanges in pieces.

@@ -6,7 +6,7 @@ tags:
   - R
   - Generative Art
 slug: nearby_colors_part_2
-summary: Follow-up from previous post using the HCL coordinates directly.
+summary: Follow-up from previous post using the HCL coordinates directly
 thumbnailImage: /post/2021-08-10-choosing-nearby-colors-part-2/index.en-us_files/hcl_par_per.jpeg
 thumbnailImagePosition: left
 showTags: true
