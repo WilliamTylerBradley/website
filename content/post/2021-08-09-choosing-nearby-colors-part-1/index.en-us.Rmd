@@ -6,7 +6,7 @@ tags:
   - R
   - Generative Art
 slug: nearby_colors_part_1
-summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space.
+summary: Attempting to select colors close to a chosen one by sampling colors in a ellipse in the HCL color space
 thumbnailImage: /post/2021-08-09-choosing-nearby-colors-part-1/index.en-us_files/h_c_plane.jpeg
 thumbnailImagePosition: left
 showTags: true
