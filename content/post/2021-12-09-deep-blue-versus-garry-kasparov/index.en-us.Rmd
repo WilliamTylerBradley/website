@@ -24,7 +24,7 @@ The idea came out of watching [*The Queen's Gambit*](https://en.wikipedia.org/wi
 
 Each of the games has a grid layout. Horizontally, the pieces lay across the columns. Vertically, the games’ actions move down the grid, with pieces dropping out when captured. Horizontal lines connect the pieces when captured. The square's color tells the location on the board. Rank follows luminance (white is lighter, black is darker) while files move along hue/chroma in the HCL color space. As pieces move on the board, their color changes from one row to the next.
 
-The code uses the [`rchess` package](http://jkunst.com/rchess/){target="_blank"} with game files from [chessgames.com](https://www.chessgames.com){target="_blank"}. `data.table` handles the data manipulation while `ggplot2` does the graphing. The code can be found [here](https://github.com/WilliamTylerBradley/DeepBlueVersusGarryKasparov){target="_blank"}.
+The code uses the [`rchess` package](http://jkunst.com/rchess/){target="_blank"} with game files from [chessgames.com](https://www.chessgames.com){target="_blank"}. `data.table` handles the data manipulation and image setup. The code can be found [here](https://github.com/WilliamTylerBradley/DeepBlueVersusGarryKasparov){target="_blank"}.
 
 Here is the piece order. This also shows the first row in each grid (notices the notches separating the types). The order starts in the middle of the king and queen, works outward, moves to the pawns, works inwards, then reverses to the other side. The two kings end up on the outside edges. The winning side's king will drop down into the final row. If there is no winner, the kings end on the same row.
 
