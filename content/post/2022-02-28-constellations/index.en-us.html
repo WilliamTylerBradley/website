@@ -1,0 +1,469 @@
+---
+title: Constellations
+author: Tyler
+date: '2022-02-28'
+tags:
+  - Generative Art
+  - R
+slug: index.en-us
+summary: Generative art project based on constellations
+thumbnailImage: /post/2022-02-28-constellations/index.en-us_files/constellations_1.jpeg
+thumbnailImagePosition: left
+showTags: yes
+---
+
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<p>This is a small generative art project based on constellations. The math behind it is pretty neat because it uses points on a sphere then projects to 2D. However, there’s no noticeable difference between this approach and starting from 2D. So I was disappointed in the results compared to the amount of work. I figured I’d go ahead and write this up in case someone else decides to attempt something similar.</p>
+<p>The code can be found <a href="https://github.com/WilliamTylerBradley/constellations" target="_blank">here</a>. Unfortunately, the code and the outputs are not as polished as I would like. I got tired of the project and decided to wrap it up where it was, but I hope this can be useful.</p>
+<p>Setting up the projection function first is crucial because I continuously use it to check the code. I’m using the <a href="https://en.wikipedia.org/wiki/Stereographic_projection" target="_blank">stereographic projection</a>. This projection will graph both hemispheres as big circles. I tried Nicolosi globular projection but found the lines curved too much. I also tried gnomonic projection since all great circles are straight lines, but it doesn’t graph the whole hemisphere nicely. Stereographic is an excellent compromise, but I wish all the lines connecting the stars were straight.</p>
+<pre class="r"><code>library(tidyverse)
+
+# df needs:
+# x, y, z on unit sphere
+projection &lt;- function(df) {
+  
+  df &lt;- df %&gt;%
+    mutate(lat = asin(z),
+           long = atan2(y, x)) %&gt;%
+    mutate(new_x = if_else(z &lt; 0, x / (1 - z), x / (1 + z) + 2),
+           new_y = if_else(z &lt; 0, y / (1 - z), y / (1 + z)))
+  
+  return(df)
+}</code></pre>
+<p>To set the stars and constellation centers, I used <a href="https://gist.github.com/mbostock/1893974" target="_blank">Mitchell’s best candidate algorithm</a> for the disk sampling method. This algorithm will space out points without putting any too close together. The code starts with one random point on the unit sphere, creates <code>candidates_n</code> new points, finds the one farthest away from the previously drawn point, and accepts it if it’s past the <code>distance_limit</code> from the already selected point. Then, for the following <code>points_n</code> times, random points are drawn, compared, and possibly selected. The function can return fewer than <code>points_n</code> points if either the <code>points_n</code> or <code>distance_limit</code> is too large.</p>
+<pre class="r"><code># points_n, approx. number of final points
+# candidates_n, number of attempts per point
+# distance_limit, minimum distance between points
+disk_sampling &lt;- function(points_n, candidates_n, distance_limit) {
+  
+  df &lt;- tibble(
+    x = c(rnorm(1), rep(0, points_n - 1)),
+    y = c(rnorm(1), rep(0, points_n - 1)),
+    z = c(rnorm(1), rep(0, points_n - 1))
+  ) %&gt;%
+    mutate(normalize = sqrt(x^2 + y^2 + z^2)) %&gt;%
+    mutate(normalize = if_else(normalize == 0, 1, normalize)) %&gt;%
+    mutate(x = x / normalize,
+           y = y / normalize,
+           z = z / normalize) %&gt;%
+    select(-normalize) %&gt;%
+    rowid_to_column(&quot;id&quot;) 
+  
+  for(i in seq(2, points_n)) {
+    
+    candidates &lt;- tibble(
+      can_x = rnorm(candidates_n),
+      can_y = rnorm(candidates_n),
+      can_z = rnorm(candidates_n)
+    ) %&gt;%
+      mutate(normalize = sqrt(can_x^2 + can_y^2 + can_z^2)) %&gt;%
+      mutate(can_x = can_x / normalize,
+             can_y = can_y / normalize,
+             can_z = can_z / normalize) %&gt;%
+      select(-normalize) %&gt;%
+      rowid_to_column(&quot;can_id&quot;) 
+    
+    best_candidate &lt;- df %&gt;%
+      filter(x != 0 | y != 0 | z != 0) %&gt;%
+      expand_grid(candidates) %&gt;%
+      mutate(distance = acos(x * can_x + 
+                               y * can_y + 
+                               z * can_z)) %&gt;%
+      group_by(can_id) %&gt;%
+      summarise(distance = min(distance)) %&gt;%
+      filter(distance == max(distance)) %&gt;%
+      filter(distance &gt; distance_limit) %&gt;%
+      slice(1) %&gt;%
+      pull(can_id)
+    
+    if(length(best_candidate) &gt; 0) {
+      best_candidate &lt;- candidates %&gt;%
+        filter(can_id == best_candidate) %&gt;%
+        mutate(can_id = i) %&gt;%
+        rename_with(~ gsub(&quot;can_&quot;, &quot;&quot;, .x))
+      
+      df &lt;- df %&gt;%
+        rows_update(best_candidate, by = &quot;id&quot;)
+    }
+    
+  }
+  
+  df &lt;- df %&gt;%
+    filter(x != 0 | y != 0 | z != 0)
+  
+  return(df)
+}</code></pre>
+<p>The following function chooses the lines that connect the stars for a single constellation. All of the lines are great circles on the unit sphere. That changes the math from typical line intersections. I don’t want any of the lines to cross. So we’ll first list out all the intersections. Then we’ll select one star at random and pull one of the lines connected to that star. I want higher probabilities on shorter lines. So the selection is weighted by the inverse of the line length. We’ll use the intersection list we previously found to avoid line crossing by removing any crossing lines from future selection. Then, we select the next star and repeat until all stars are connected.</p>
+<pre class="r"><code># df needs x, y, z
+connections &lt;- function(df) {
+  
+  lines &lt;- data.frame(
+    line_id_1_2 = integer(),
+    id_2 = integer(),
+    id_1 = integer(),
+    x_2 = numeric(),
+    x_1 = numeric(),
+    y_2 = numeric(),
+    y_1 = numeric(),
+    z_2 = numeric(),
+    z_1 = numeric()
+  )
+  
+  if(nrow(df) &lt;= 1) {
+    return(lines)
+  }
+  
+  connections &lt;- df %&gt;%
+    select(starts_with(&quot;star&quot;)) %&gt;%
+    rename_with(~ paste0(gsub(&quot;star_&quot;, &quot;&quot;, .x), &quot;_1&quot;)) %&gt;%
+    select(id_1, x_1, y_1, z_1)
+  
+  connections &lt;- connections %&gt;%
+    rename_with(~ paste0(gsub(&quot;1&quot;, &quot;&quot;, .x), &quot;2&quot;)) %&gt;%
+    expand_grid(connections) %&gt;%
+    filter(id_1 &lt; id_2) %&gt;%
+    mutate(a_1_2 = y_1 * z_2 - z_1 * y_2,
+           b_1_2 = z_1 * x_2 - x_1 * z_2,
+           c_1_2 = x_1 * y_2 - y_1 * x_2) %&gt;%
+    rowid_to_column(&quot;line_id_1_2&quot;)
+  
+  # https://blog.mbedded.ninja/mathematics/geometry/spherical-geometry/finding-the-intersection-of-two-arcs-that-lie-on-a-sphere/
+  # https://www.dirkbertels.net/computing/greatCircles_files/great_circles_070206.pdf
+  intersections &lt;- connections %&gt;%
+    rename_with(~ gsub(&quot;1&quot;, &quot;3&quot;, .x)) %&gt;%
+    rename_with(~ gsub(&quot;2&quot;, &quot;4&quot;, .x)) %&gt;% 
+    expand_grid(connections) %&gt;%
+    filter(line_id_1_2 &lt; line_id_3_4) %&gt;%
+    filter((id_1 != id_3 &amp; id_1 != id_4) &amp;
+             (id_2 != id_3 &amp; id_2 != id_4)) %&gt;% # remove ones that share a star
+    mutate(l_1 = b_1_2 * c_3_4 - c_1_2 * b_3_4,
+           m_1 = c_1_2 * a_3_4 - a_1_2 * c_3_4,
+           n_1 = a_1_2 * b_3_4 - b_1_2 * a_3_4) %&gt;%
+    mutate(normal = sqrt(l_1^2 + m_1^2 + n_1^2)) %&gt;%
+    mutate(l_1 = l_1 / normal,
+           m_1 = m_1 / normal,
+           n_1 = n_1 / normal) %&gt;%
+    mutate(l_2 = -l_1,
+           m_2 = -m_1,
+           n_2 = -n_1) %&gt;%
+    mutate(normal_1 = sqrt(x_1^2 + y_1^2 + z_1^2),
+           normal_2 = sqrt(x_2^2 + y_2^2 + z_2^2),
+           normal_3 = sqrt(x_3^2 + y_3^2 + z_3^2),
+           normal_4 = sqrt(x_4^2 + y_4^2 + z_4^2),
+           normal_l_1 = sqrt(l_1^2 + m_1^2 + n_1^2),
+           normal_l_2 = sqrt(l_2^2 + m_2^2 + n_2^2)) %&gt;%  # technically, all 1&#39;s
+    mutate(angle_1_l_1 = acos(round((x_1 * l_1 + y_1 * m_1 + z_1 * n_1) / 
+                                      (normal_1 * normal_l_1), 7)) * 180/pi,
+           angle_l_1_2 = acos(round((x_2 * l_1 + y_2 * m_1 + z_2 * n_1) / 
+                                      (normal_2 * normal_l_1), 7)) * 180/pi,
+           angle_1_l_2 = acos(round((x_1 * l_2 + y_1 * m_2 + z_1 * n_2) / 
+                                      (normal_1 * normal_l_2), 7)) * 180/pi,
+           angle_l_2_2 = acos(round((x_2 * l_2 + y_2 * m_2 + z_2 * n_2) / 
+                                      (normal_2 * normal_l_2), 7)) * 180/pi,
+           angle_1_2 = acos(round((x_1 * x_2 + y_1 * y_2 + z_1 * z_2) / 
+                                    (normal_1 * normal_2), 7)) * 180/pi,
+           angle_3_l_1 = acos(round((x_3 * l_1 + y_3 * m_1 + z_3 * n_1) / 
+                                      (normal_3 * normal_l_1), 7)) * 180/pi,
+           angle_l_1_4 = acos(round((x_4 * l_1 + y_4 * m_1 + z_4 * n_1) / 
+                                      (normal_4 * normal_l_1), 7)) * 180/pi,
+           angle_3_l_2 = acos(round((x_3 * l_2 + y_3 * m_2 + z_3 * n_2) / 
+                                      (normal_3 * normal_l_2), 7)) * 180/pi,
+           angle_l_2_4 = acos(round((x_4 * l_2 + y_4 * m_2 + z_4 * n_2) / 
+                                      (normal_4 * normal_l_2), 7)) * 180/pi,
+           angle_3_4 = acos(round((x_3 * x_4 + y_3 * y_4 + z_3 * z_4) / 
+                                    (normal_3 * normal_4), 7)) * 180/pi) %&gt;%
+    mutate(sum_angle_1_l_1_2 = angle_1_l_1 + angle_l_1_2,
+           sum_angle_1_l_2_2 = angle_1_l_2 + angle_l_2_2,
+           sum_angle_3_l_1_4 = angle_3_l_1 + angle_l_1_4,
+           sum_angle_3_l_2_4 = angle_3_l_2 + angle_l_2_4) %&gt;%
+    mutate(on_segment_1_l_1_2 = 
+             if_else(abs(sum_angle_1_l_1_2 - angle_1_2) &lt; .001, 1, 0),
+           on_segment_1_l_2_2 = 
+             if_else(abs(sum_angle_1_l_2_2 - angle_1_2) &lt; .001, 1, 0),
+           on_segment_3_l_1_4 = 
+             if_else(abs(sum_angle_3_l_1_4 - angle_3_4) &lt; .001, 1, 0),
+           on_segment_3_l_2_4 = 
+             if_else(abs(sum_angle_3_l_2_4 - angle_3_4) &lt; .001, 1, 0)) %&gt;%
+    mutate(intersects = if_else((on_segment_1_l_1_2 == 1 &amp; on_segment_3_l_1_4) |
+                                  (on_segment_1_l_2_2 == 1 &amp; on_segment_3_l_2_4),
+                                1, 0)) %&gt;%
+    filter(intersects == 1)
+  
+  ## Loop through adding one at a time
+  star_list &lt;- df %&gt;%
+    arrange(sample(1:n(), n())) %&gt;%
+    pull(star_id)
+  
+  for(i in seq(1, length(star_list))) {
+    current_star &lt;- star_list[i]
+    potential_lines &lt;- connections %&gt;%
+      filter(id_1 == current_star | id_2 == current_star) %&gt;%
+      anti_join(lines, by = &quot;line_id_1_2&quot;)
+    
+    # remove intersections
+    limit_lines &lt;- intersections %&gt;%
+      select(line_id_1_2, line_id_3_4)
+    limit_lines &lt;- intersections %&gt;%
+      select(line_id_1_2, line_id_3_4) %&gt;%
+      rename(line_id_1_2 = line_id_3_4,
+             line_id_3_4 = line_id_1_2) %&gt;%
+      rbind(limit_lines) %&gt;%
+      inner_join(lines, by = &quot;line_id_1_2&quot;)
+    limit_lines &lt;- limit_lines %&gt;%
+      select(line_id_1_2, line_id_3_4)
+    limit_lines &lt;- limit_lines %&gt;%
+      select(line_id_1_2, line_id_3_4) %&gt;%
+      rename(line_id_1_2 = line_id_3_4,
+             line_id_3_4 = line_id_1_2) %&gt;%
+      rbind(limit_lines)
+    
+    potential_lines &lt;- potential_lines %&gt;%
+      anti_join(limit_lines, by = c(&quot;line_id_1_2&quot;))
+    
+    if(nrow(potential_lines) &gt; 0) {
+      lines &lt;- potential_lines %&gt;%
+        mutate(weight = acos(x_1*x_2 + 
+                               y_1 * y_2 + 
+                               z_1 * z_2)) %&gt;%
+        sample_n(1, weight = 1/weight) %&gt;% # add weights here
+        select(-weight) %&gt;%
+        rbind(lines)
+    }
+  }
+  
+  lines &lt;- lines %&gt;%
+    select(-a_1_2, -b_1_2, -c_1_2)
+  
+  return(lines)
+}</code></pre>
+<p>For the sky, we’ll start with 88 constellation centers using the disk sampling method. For the stars, we’ll set up eight sets of 33 stars. Each set of 33 stars is spaced nicely, while having eight groups adds a little noise.</p>
+<pre class="r"><code>constellations &lt;- disk_sampling(88, 25, .01) %&gt;%
+  select(-id) %&gt;%
+  rowid_to_column(&quot;id&quot;) %&gt;%
+  rename_with(~ paste0(&quot;constellation_&quot;, .x))
+
+# 88 * 3
+# 264 / 8 = 33
+stars &lt;- rbind(disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01),
+               disk_sampling(33, 25, .01)) %&gt;%
+  select(-id) %&gt;%
+  rowid_to_column(&quot;id&quot;) %&gt;%
+  rename_with(~ paste0(&quot;star_&quot;, .x))</code></pre>
+<p>We’ll find the closest star to each constellation center and combine them. Checking that they don’t cross over from one hemisphere to the other keeps the constellation in only one of the big circles after projecting. We’ll move each star a little closer to the constellation center to create a bit more distance between the constellations.</p>
+<pre class="r"><code>sky &lt;- constellations %&gt;%
+  expand_grid(stars) %&gt;%
+  mutate(distance = acos(constellation_x * star_x + 
+                           constellation_y * star_y + 
+                           constellation_z * star_z)) %&gt;%
+  filter(sign(star_z) == sign(constellation_z)) %&gt;% # make sure they cross over line
+  group_by(star_id) %&gt;%
+  filter(distance == min(distance))
+
+# https://math.stackexchange.com/questions/2375102/parametric-equation-of-a-circle-in-3d-given-center-and-two-points-on-the-circle
+move_percentage &lt;- .25
+star_movement &lt;- sky %&gt;%
+  mutate(normal_x = star_y * constellation_z - star_z * constellation_y,
+         normal_y = star_z * constellation_x - star_x * constellation_z,
+         normal_z = star_x * constellation_y - star_y * constellation_x,
+         interior = star_x * constellation_x + 
+           star_y * constellation_y + 
+           star_z * constellation_z) %&gt;%
+  mutate(normal_norm = sqrt(normal_x^2 + normal_y^2 + normal_z^2)) %&gt;%
+  mutate(normal_x = normal_x / normal_norm,
+         normal_y = normal_y / normal_norm,
+         normal_z = normal_z / normal_norm) %&gt;%
+  mutate(angle = acos(interior) * move_percentage,
+         perp_x = normal_y * star_z - normal_z * star_y,
+         perp_y = normal_z * star_x - normal_x * star_z,
+         perp_z = normal_x * star_y - normal_y * star_x) %&gt;%
+  mutate(perp_norm = sqrt(perp_x^2 + perp_y^2 + perp_z^2)) %&gt;%
+  mutate(perp_x = perp_x / perp_norm,
+         perp_y = perp_y / perp_norm,
+         perp_z = perp_z / perp_norm) %&gt;%
+  mutate(star_x = cos(angle) * star_x + sin(angle) * perp_x,
+         star_y = cos(angle) * star_y + sin(angle) * perp_y,
+         star_z = cos(angle) * star_z + sin(angle) * perp_z)
+         
+star_movement &lt;- star_movement %&gt;%
+  select(star_id, star_x, star_y, star_z) %&gt;%
+  rename_with(~ gsub(&quot;star_&quot;, &quot;&quot;, .x)) %&gt;%
+  rename_with(~ paste0(&quot;star_&quot;, .x))
+
+sky &lt;- sky %&gt;%
+  rows_update(star_movement, by = &quot;star_id&quot;)
+
+sky &lt;- sky %&gt;%
+  select(-distance) %&gt;%
+  rownames_to_column(&quot;row&quot;) %&gt;%
+  pivot_longer(cols = -row,
+               names_to = c(&quot;object&quot;, &quot;.value&quot;),
+               names_sep =  &quot;_&quot;) %&gt;%
+  projection() %&gt;%
+  pivot_wider(id_cols = row,
+              names_from = object,
+              names_glue = &quot;{object}_{.value}&quot;,
+              values_from = c(id, x, y, z, lat, long,
+                              new_x, new_y)) %&gt;%
+  select(-row)</code></pre>
+<p>Now that we have the stars in their final positions and set to a constellation, we can add the lines.</p>
+<pre class="r"><code>lines &lt;- sky %&gt;%
+  select(constellation_id, star_id,
+         star_x, star_y, star_z) %&gt;%
+  nest(data = c(star_id, star_x, star_y, star_z)) %&gt;%
+  mutate(data = map(data, connections)) %&gt;%
+  unnest(data)
+
+lines &lt;- lines %&gt;%
+  pivot_longer(-c(constellation_id, line_id_1_2),
+               names_to = c(&quot;.value&quot;, &quot;star&quot;),
+               names_sep =  &quot;_&quot;) %&gt;%
+  projection() %&gt;%
+  pivot_wider(id_cols = c(constellation_id, line_id_1_2),
+              names_from = star,
+              values_from = c(id, x, y, z, lat, long,
+                              new_x, new_y))
+
+# https://math.stackexchange.com/questions/383711/parametric-equation-for-great-circle
+curves &lt;- lines %&gt;%
+  expand_grid(f = seq(0, 1, length.out = 100)) %&gt;%
+  mutate(d = acos(sin(lat_1) * sin(lat_2) + cos(lat_1) * cos(lat_2) * cos(long_1 - long_2))) %&gt;%
+  mutate(A = sin((1 - f) * d) / sin(d),
+         B = sin(f * d) / sin(d)) %&gt;%
+  mutate(x = A * cos(lat_1) * cos(long_1) + B * cos(lat_2) * cos(long_2),
+         y = A * cos(lat_1) * sin(long_1) + B * cos(lat_2) * sin(long_2),
+         z = A * sin(lat_1)               + B * sin(lat_2)) %&gt;%
+  select(constellation_id, line_id_1_2, x, y, z) %&gt;%
+  projection() %&gt;%
+  group_by(constellation_id, line_id_1_2) %&gt;%
+  mutate(next_new_x = lead(new_x),
+         next_new_y = lead(new_y)) %&gt;%
+  filter(!is.na(next_new_x))</code></pre>
+<p>The last part adds some background stars, the outline circles, and randomizes the features a little bit.</p>
+<pre class="r"><code>base_hue &lt;- 260 + rnorm(1, 0, sd = 5)
+base_chroma &lt;- 25 + rnorm(1, 0, sd = 3)
+dark_luminance &lt;- 25 + rnorm(1, 0, sd = 3)
+med_luminance &lt;- 50 + rnorm(1, 0, sd = 3)
+light_luminance &lt;- 75 + rnorm(1, 0, sd = 3)
+bright_luminance &lt;- 90 + rnorm(1, 0, sd = 3)
+
+background_stars_n &lt;- 1000
+background_stars &lt;- tibble(
+  x = rnorm(background_stars_n),
+  y = rnorm(background_stars_n),
+  z = rnorm(background_stars_n)
+) %&gt;%
+  mutate(normalize = sqrt(x^2 + y^2 + z^2)) %&gt;%
+  mutate(normalize = if_else(normalize == 0, 1, normalize)) %&gt;%
+  mutate(x = x / normalize,
+         y = y / normalize,
+         z = z / normalize) %&gt;%
+  select(-normalize) %&gt;%
+  rowid_to_column(&quot;id&quot;) %&gt;%
+  projection() %&gt;%
+  mutate(hue = base_hue + rnorm(n(), 0, sd = 7),
+         chroma = base_chroma + rnorm(n(), 0, sd = 7),
+         luminance = med_luminance + rnorm(n(), 0, sd = 7)) %&gt;%
+  mutate(chroma = if_else(chroma &lt; 0, base_chroma, chroma),
+         luminance = if_else(luminance &lt; 0 | luminance &gt; 100, 
+                             med_luminance, luminance)) %&gt;%
+  mutate(color_value = hcl(hue, chroma, luminance),
+         size_value = runif(n(), .25, .5)) %&gt;%
+  mutate(color_value = if_else(is.na(color_value), 
+                               hcl(base_hue, base_chroma, med_luminance),
+                               color_value))
+
+outline_circles &lt;- tibble(
+  circle_id = rep(c(1, 2), each = 360*2),
+  x = rep(seq(1, 100, length.out = 360*2), 2),
+  y = rep(seq(1, 100, length.out = 360*2), 2)
+) %&gt;%
+  mutate(x = cos(x) + 2*(circle_id-1),
+         y = sin(y)) %&gt;%
+  group_by(circle_id) %&gt;%
+  mutate(xend = lead(x),
+         yend = lead(y)) %&gt;%
+  filter(!is.na(xend)) %&gt;%
+  mutate(hue = base_hue,
+         chroma = base_chroma,
+         luminance = med_luminance) %&gt;%
+  mutate(color_value = hcl(hue, chroma, luminance))
+
+sky &lt;- sky %&gt;%
+  mutate(hue = base_hue + rnorm(n(), 0, sd = 7),
+         chroma = (base_chroma / 2) + rnorm(n(), 0, sd = 2),
+         luminance = bright_luminance + rnorm(n(), 0, sd = 2)) %&gt;%
+  mutate(color_value = hcl(hue, chroma, luminance),
+         size_value = runif(n(), .5, 2)) %&gt;%
+  mutate(color_value = if_else(is.na(color_value), 
+                               hcl(base_hue, base_chroma, bright_luminance),
+                               color_value))</code></pre>
+<p>Finally, we graph everything.</p>
+<pre class="r"><code>ggplot() +
+  geom_segment(data = outline_circles, aes(x = x, y = y, 
+                                           xend = xend, yend = yend,
+                                           group = circle_id,
+                                           color = color_value),
+               size = .25) +
+  geom_point(data = background_stars, aes(x = new_x, y = new_y, color = color_value,
+                                          size = size_value),
+             shape = 16) +
+  geom_segment(data = curves, aes(x = new_x, y = new_y,
+                               xend = next_new_x, yend = next_new_y),
+               color = hcl(base_hue, base_chroma, light_luminance),
+               size = .15) +
+  geom_point(data = sky, aes(x = star_new_x, y = star_new_y, 
+             color = hcl(base_hue, base_chroma, dark_luminance),
+             size = size_value + 1)) +
+  geom_point(data = sky, aes(x = star_new_x, y = star_new_y, color = color_value,
+                             size = size_value)) +
+  scale_color_identity() +
+  scale_radius(range = c(.01, .25)) +
+  scale_x_continuous(limits = c(-1, 3)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  coord_equal() +
+  theme_void() +
+  theme(plot.background = element_rect(fill = hcl(base_hue, base_chroma, dark_luminance)),
+        legend.position = &quot;none&quot;)</code></pre>
+<p>Here are the first five images using <code>set.seed(x)</code>.</p>
+<div class="figure">
+<img src="/post/2022-02-28-constellations/index.en-us_files/constellations_1.jpeg" alt="Image 1" style="display:block; margin:auto;" />
+<p class="caption">
+Image 1
+</p>
+</div>
+<p><br></p>
+<div class="figure">
+<img src="/post/2022-02-28-constellations/index.en-us_files/constellations_2.jpeg" alt="Image 2" style="display:block; margin:auto;" />
+<p class="caption">
+Image 2
+</p>
+</div>
+<p><br></p>
+<div class="figure">
+<img src="/post/2022-02-28-constellations/index.en-us_files/constellations_3.jpeg" alt="Image 3" style="display:block; margin:auto;" />
+<p class="caption">
+Image 3
+</p>
+</div>
+<p><br></p>
+<div class="figure">
+<img src="/post/2022-02-28-constellations/index.en-us_files/constellations_4.jpeg" alt="Image 4" style="display:block; margin:auto;" />
+<p class="caption">
+Image 4
+</p>
+</div>
+<p><br></p>
+<div class="figure">
+<img src="/post/2022-02-28-constellations/index.en-us_files/constellations_5.jpeg" alt="Image 5" style="display:block; margin:auto;" />
+<p class="caption">
+Image 5
+</p>
+</div>
