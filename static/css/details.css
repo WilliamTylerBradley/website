@@ -2,3 +2,7 @@ details {
   cursor: pointer;
   color: #C29CB7;
 }
+
+hr {
+  border-top: 1px solid #CAD3C1;
+}

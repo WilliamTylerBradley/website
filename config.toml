@@ -105,7 +105,7 @@ canonifyurls = true
   # If false it will flat categories.
   hierarchicalCategories = true
 
-  description = "Blog about my time in healthcare and data science"
+  description = "Blog about data science and generative art"
 
   # Customization
   # Define the behavior of the sidebar
