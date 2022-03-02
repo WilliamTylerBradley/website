@@ -5,7 +5,7 @@ date: '2021-12-09'
 tags:
   - Generative Art
   - R
-slug: index.en-us
+slug: deep-blue-vs-garry-kasparov
 summary: Generative art based on chess games
 thumbnailImage: /post/2021-12-09-deep-blue-versus-garry-kasparov/index.en-us_files/DeepBlueVersusGarryKasparov1996.png
 thumbnailImagePosition: left
