@@ -5,7 +5,7 @@ date: '2021-10-25'
 tags:
   - Generative Art
   - R
-slug: index.en-us
+slug: penrose-tiling
 summary: R package for Penrose tiling patterns
 thumbnailImage: /post/2021-10-25-penrose-tiling/index.en-us_files/penrosetiling.png
 thumbnailImagePosition: left
