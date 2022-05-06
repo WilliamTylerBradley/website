@@ -1,0 +1,1066 @@
+---
+title: Pandemic Mazes
+author: Tyler
+date: '2022-05-03'
+tags:
+  - Generative Art
+  - R
+slug: pandemic-mazes
+summary: Generative art based on grocery store floor signs
+thumbnailImage: /post/2022-05-03-pandemic-mazes/index.en-us_files/image_75_1.jpeg
+thumbnailImagePosition: left
+showTags: true
+---
+
+
+
+<div id="background" class="section level1">
+<h1>Background</h1>
+<p>This art project came out of my experiences during the pandemic. I thought the signs on grocery store floors were an interesting physical manifestation of the COVID rules. Especially since some places had clear signs but some didn’t, some people followed the signs but some didn’t, and some signs were consistent for a long time but some weren’t. This same situation is reflected in the other rules where some are clear, followed, and consistent, but others aren’t.</p>
+<p>So I decided to make a generative art project that creates random paths based on pandemic signs. For each image created, the maze generated has the same start and endpoints, but the path in between can be complicated or straightforward. On one end of the spectrum, the maze follows mostly straight lines into the middle and then back out of the maze with consistent signage. The other end has the maze meander all over with many different signs. There’s a parameter for all of this code that causes that. Changes in this parameter can express experiences or match data for different regions/times.</p>
+<p>The program works in five steps:</p>
+<ul>
+<li>Create a base maze.</li>
+<li>Update the maze to double all the edges.</li>
+<li>Move through all edges in one path.</li>
+<li>Add in the images for signs.</li>
+<li>Finally, add the background and save.</li>
+</ul>
+</div>
+<div id="create-a-base-maze" class="section level1">
+<h1>Create a base maze</h1>
+<p>A five-by-five square of nodes sets up each maze. A data set of edges connect the vertical and horizontal neighbors. The set for the labyrinth is marked here. The maze always starts at the bottom middle node. After that, edges are selected, checked if they can be included or if it would cause the maze to connect in on itself, and marked as part of the maze or as discard.</p>
+<p>A parameter ranging from 0 to 1 determines how much the maze turns. A value of 0 yields a completely random maze and 1 for following a smooth labyrinth that spirals in and then back out to the start. Any value in between sets the probability of choosing a new step at random versus moving along the labyrinth.</p>
+<details open>
+<summary>
+[<code>get_maze</code> function]
+</summary>
+<pre class="r"><code>get_maze &lt;- function(structure_parameter) {
+
+  # Sets up base data set of potential edges for the maze
+  # size is always 5 for right now
+  size &lt;- 5
+  edges &lt;- CJ(
+    x1 = rep(seq(1, size), 2),
+    y1 = seq(1, size)
+  )
+  edges[, &quot;:=&quot;(x2 = ifelse(.I %% 2 == 0, x1 + 1, x1),
+    y2 = ifelse(.I %% 2 == 1, y1 + 1, y1))]
+  edges &lt;- edges[x2 &lt;= size &amp; y2 &lt;= size, ]
+  edges[, id := seq(1, nrow(edges))]
+  edges[, &quot;:=&quot;(node1 = (x1 - 1) * size + (y1 - 1) + 1,
+    node2 = (x2 - 1) * size + (y2 - 1) + 1)]
+  setkey(edges, id)
+
+  # Set up the path for the labyrinth
+  edges[, labyrinth := 0]
+  edges[
+    .(c(20, 29, 37, 38, 39, 40, 
+        36, 27, 18,  9,  7,  5, 
+         3,  1,  2, 10, 12, 14, 
+        17, 26, 32, 30, 22, 21)),
+    labyrinth := seq(1, 24)
+  ]
+
+  # data set of nodes
+  nodes &lt;- unique(rbind(edges[, .(id = node1)], edges[, .(id = node2)]))
+  nodes[, connected := 0]
+  setkey(nodes, id)
+
+  # data set of node id to edge ids
+  nodes_edges &lt;- unique(rbind(edges[, .(id = node1, edge = id)][], 
+                              edges[, .(id = node2, edge = id)]))
+  setkey(nodes_edges, id)
+
+  # location : 1 for maze, 0 for frontier, -1 for uncharted, -2 for discarded
+  # starting point : bottom middle
+  # include bottom middle then either off to the sides or up
+  if (runif(1, 0, 1) &lt;= structure_parameter) {
+    starting_edge &lt;- edges[x1 == 3 &amp; y1 == 1 &amp; x2 == 4 &amp; y2 == 1, ]
+  } else {
+    starting_edge &lt;- edges[(x1 == 3 &amp; y1 == 1) |
+      (x1 == 2 &amp; y1 == 1 &amp; x2 == 3 &amp; y2 == 1), ][sample(.N, 1), ]
+  }
+
+  # Set up base columns
+  edges[, &quot;:=&quot;(location = -1,
+    probability = 0)]
+  edges[.(starting_edge$id), &quot;:=&quot;(location = 1,
+    probability = 0)]
+  nodes[.(c(starting_edge$node1, starting_edge$node2)), connected := 1]
+  edges[.(nodes_edges[.(c(starting_edge$node1, starting_edge$node2)), &quot;edge&quot;]), &quot;:=&quot;
+  (location = fifelse(location == -1, 0, location),
+    probability = fifelse(location == -1, 1, probability))]
+
+  #### Loop through maze generation ----
+  num_edges &lt;- 1
+  while (num_edges &lt; (size^2 - 1)) {
+
+    # select next edge
+    if (runif(1, 0, 1) &lt;= structure_parameter) {
+      selected_edge &lt;- edges[edges$location == 0, 
+                             ][max(labyrinth) == labyrinth, 
+                               ][sample(.N, 1), ]
+    } else {
+      selected_edge &lt;- edges[sample(.N, 1, prob = probability), ]
+    }
+
+    ## if it&#39;s good, then
+    # add it to the maze
+    # add connecting edges to the frontier
+    # else add it to discard
+    if (any(nodes[.(c(selected_edge$node1, selected_edge$node2))
+                  , connected] == 0)) {
+
+      # add to maze
+      edges[.(selected_edge$id), &quot;:=&quot;(location = 1,
+        probability = 0)]
+
+      # update nodes
+      nodes[.(c(selected_edge$node1, selected_edge$node2)), connected := 1]
+
+      # update frontier
+      edges[.(nodes_edges[.(c(selected_edge$node1, selected_edge$node2))
+                          , &quot;edge&quot;]), &quot;:=&quot;
+      (location = fifelse(location == -1, 0, location),
+        probability = fifelse(location == -1, 1, probability))]
+
+      num_edges &lt;- num_edges + 1
+    } else {
+      # drop from frontier
+      edges[.(selected_edge$id), &quot;:=&quot;(location = -2,
+        probability = 0)]
+    }
+  }
+
+  return(edges[location == 1, ])
+}</code></pre>
+</details>
+<p>The following image displays the base maze layout. The edges are numbered with their x1/y1 coordinates at their left/bottom and x2/y2 at their right/top. The labyrinth pattern is highlighted in blue.</p>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/post_1.png" alt="Maze edges with labyrinth highlighted" style="display:block; margin:auto;" />
+<p class="caption">
+Maze edges with labyrinth highlighted
+</p>
+</div>
+</div>
+<div id="update-the-maze-to-double-all-the-edges." class="section level1">
+<h1>Update the maze to double all the edges.</h1>
+<p>For the final image, the path needs to start at one point, move through all the nodes, then exit at one other point. To ensure this capability, the path will travel through the maze and backtrack to the starting point. This is typically done using a graph setup, but I wanted to keep the table data structure. So instead of following those instructions, I take every edge and double for each direction. The code works by replacing all possible edges with either two parallel edges (if the edge was in the maze) or two perpendicular ones (if the edge was discarded).</p>
+<details open>
+<summary>
+[<code>update_maze</code> function]
+</summary>
+<pre class="r"><code>update_maze &lt;- function(edges) {
+
+  # list out all possible edges
+  # (basically same code as setting up the maze)
+  # plus adds edges that stick out on the outside
+  all_possible_edges &lt;- CJ(
+    x1 = rep(seq(1, 6), 2) - 1,
+    y1 = seq(1, 6) - 1
+  )
+  all_possible_edges[, &quot;:=&quot;(x2 = ifelse(.I %% 2 == 0, x1 + 1, x1),
+    y2 = ifelse(.I %% 2 == 1, y1 + 1, y1))]
+  all_possible_edges &lt;- all_possible_edges[(x1 != 0 | x2 != 0) &amp;
+    (y1 != 0 | y2 != 0), ]
+
+  edges &lt;- edges[, .(x1, x2, y1, y2, id)]
+
+  # merge maze and all possible edges to see which ones weren&#39;t used
+  all_possible_edges &lt;- merge(all_possible_edges, edges,
+    by = c(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;),
+    all.x = TRUE
+  )
+
+  # This function subs in the new edges appropriately
+  # basically, any path edge needs to be updated to two edges so the maze
+  # starts at the bottom middle, travels through the maze, and back to the start
+  create_new_edges &lt;- function(x1, y1, x2, y2, id) {
+    # if no edges, add block
+    if (is.na(id)) {
+      if (y1 == y2) { # horizontal edge
+        list(
+          x1_1 = 2 * x1,
+          y1_1 = 2 * y1 - 1,
+          x2_1 = 2 * x1,
+          y2_1 = 2 * y1,
+          x1_2 = 2 * x2 - 1,
+          y1_2 = 2 * y2 - 1,
+          x2_2 = 2 * x2 - 1,
+          y2_2 = 2 * y2
+        )
+      } else { # vertical edge
+        list(
+          x1_1 = 2 * x1 - 1,
+          y1_1 = 2 * y1,
+          x2_1 = 2 * x1,
+          y2_1 = 2 * y1,
+          x1_2 = 2 * x2 - 1,
+          y1_2 = 2 * y2 - 1,
+          x2_2 = 2 * x2,
+          y2_2 = 2 * y2 - 1
+        )
+      }
+    } else { # has edge, add connections
+      if (y1 == y2) { # horizontal edge
+        list(
+          x1_1 = 2 * x1,
+          y1_1 = 2 * y1 - 1,
+          x2_1 = 2 * x2 - 1,
+          y2_1 = 2 * y2 - 1,
+          x1_2 = 2 * x1,
+          y1_2 = 2 * y1,
+          x2_2 = 2 * x2 - 1,
+          y2_2 = 2 * y2
+        )
+      } else { # vertical edge
+        list(
+          x1_1 = 2 * x1 - 1,
+          y1_1 = 2 * y1,
+          x2_1 = 2 * x2 - 1,
+          y2_1 = 2 * y2 - 1,
+          x1_2 = 2 * x1,
+          y1_2 = 2 * y1,
+          x2_2 = 2 * x2,
+          y2_2 = 2 * y2 - 1
+        )
+      }
+    }
+  }
+
+  # fill in blocks and paths
+  all_possible_edges[, c(
+    &quot;x1_1&quot;, &quot;y1_1&quot;, &quot;x2_1&quot;, &quot;y2_1&quot;,
+    &quot;x1_2&quot;, &quot;y1_2&quot;, &quot;x2_2&quot;, &quot;y2_2&quot;
+  ) := create_new_edges(x1, y1, x2, y2, id),
+  by = seq_len(nrow(all_possible_edges))
+  ]
+
+  # clean everything up
+  all_possible_edges[, &quot;:=&quot;(x1 = NULL,
+    y1 = NULL,
+    x2 = NULL,
+    y2 = NULL,
+    id = NULL)]
+
+  all_possible_edges &lt;- melt(all_possible_edges,
+    measure.vars = patterns(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;),
+    value.name = c(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;)
+  )[, variable := NULL]
+
+  all_possible_edges &lt;- all_possible_edges[(x1 &gt; 0 &amp;
+    y1 &gt; 0 &amp;
+    x2 &lt; 11 &amp;
+    y2 &lt; 11) &amp;
+    (x1 != 5 |
+      y1 != 1 |
+      x2 != 6 |
+      y2 != 1), ]
+
+  all_possible_edges &lt;- rbind(
+    all_possible_edges,
+    data.table(
+      x1 = c(5, 6),
+      y1 = c(0, 0),
+      x2 = c(5, 6),
+      y2 = c(1, 1)
+    )
+  )
+}</code></pre>
+</details>
+<p>The following two images show a randomly generated maze and output for doubling the edges. The image on the left has the maze in red with all possible edges in blue. Note the extra blue edges are pointing out of the original five-by-five square. These will provide the walls for paths on the maze’s outside edge. The image on the right displays the result of substituting every edge with a parallel set for maze edges and a perpendicular set for non-maze edges. So, each red line has two new black lines running next to it, while each blue line has two new black lines cutting through it. Note that the coordinates’ ranges have changed from one to five to zero to eleven (everything is times two then minus one).</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/post_2.png" alt="Randomly generated maze" style="display:block; margin:auto;" />
+<p class="caption">
+Randomly generated maze
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/post_3.png" alt="Doubling maze edges" style="display:block; margin:auto;" />
+<p class="caption">
+Doubling maze edges
+</p>
+</div>
+</div>
+</div>
+<p>This image shows the cleaned-up final output for this function. The unconnected outside edges are removed. The start and end edges are added to the bottom middle with the connection between them severed.</p>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/post_4.png" alt="Cleaned-up output" style="display:block; margin:auto;" />
+<p class="caption">
+Cleaned-up output
+</p>
+</div>
+</div>
+<div id="move-through-all-edges-in-one-path." class="section level1">
+<h1>Move through all edges in one path.</h1>
+<p>Now, the edges from the previous step can be connected into one path. The path starts at the bottom middle and then moves to the next node. After that, the path connects to the unconnected node. Because of the previous setup, each node (except starting and end ones) connects to exactly two other nodes. So, we don’t have to worry about hitting dead ends.</p>
+<details open>
+<summary>
+[<code>maze_to_path</code> function]
+</summary>
+<pre class="r"><code>maze_to_path &lt;- function(edges) {
+  # set up id
+  edges[, id := .I]
+  setkey(edges, id)
+
+  # set up nodes data set
+  nodes &lt;- unique(rbind(edges[, .(x = x1, y = y1)]
+                        , edges[, .(x = x2, y = y2)]))
+  nodes[, id := .I]
+  setkey(nodes, id)
+
+  # add node ids to edges data set
+  edges &lt;- merge(edges, nodes,
+    by.x = c(&quot;x1&quot;, &quot;y1&quot;), by.y = c(&quot;x&quot;, &quot;y&quot;),
+    suffixes = c(&quot;&quot;, &quot;_node_1&quot;), all.x = TRUE
+  )
+  edges &lt;- merge(edges, nodes,
+    by.x = c(&quot;x2&quot;, &quot;y2&quot;), by.y = c(&quot;x&quot;, &quot;y&quot;),
+    suffixes = c(&quot;&quot;, &quot;_node_2&quot;), all.x = TRUE
+  )
+
+  # nodes to edges look up table
+  nodes_edges &lt;- unique(rbind(
+    edges[, .(id = id_node_1, edge = id, connecting_node = id_node_2)],
+    edges[, .(id = id_node_2, edge = id, connecting_node = id_node_1)]
+  ))
+  setkey(nodes_edges, id)
+
+  # save spot for path
+  path &lt;- vector(mode = &quot;numeric&quot;)
+
+  # variables to keep track of progress through the mase
+  last_node &lt;- nodes[y == 0 &amp; x == 5, id]
+  current_node &lt;- nodes[y == 0 &amp; x == 6, id]
+
+  # update path
+  path &lt;- append(path, current_node)
+  previous_node &lt;- current_node
+
+  # keep going to unexplored nodes
+  current_node &lt;- nodes_edges[.(current_node), 
+                              ][connecting_node != previous_node
+                                , connecting_node]
+
+  # continue through the whole path
+  while (length(current_node) &gt; 0) {
+    path &lt;- append(path, current_node)
+    future_node &lt;- nodes_edges[.(current_node), 
+                               ][connecting_node != previous_node
+                                 , connecting_node]
+    previous_node &lt;- current_node
+    current_node &lt;- future_node
+  }
+
+  path &lt;- data.table(
+    order = seq(1, length(path)),
+    node = path
+  )
+  path &lt;- merge(path, nodes, by.x = c(&quot;node&quot;), by.y = c(&quot;id&quot;))
+}</code></pre>
+</details>
+</div>
+<div id="add-in-the-images-for-signs." class="section level1">
+<h1>Add in the images for signs.</h1>
+<p>Creating the signs takes place before creating the maze. Each image name has three parts: sign, course, and direction. The sign contains essential information on what the image is. The course is how the path moves (straight, turn right, etc.). Direction is where the path is coming from (east, north, etc.).</p>
+<details open>
+<summary>
+[first part of <code>create_signs</code> code]
+</summary>
+<pre class="r"><code>library(data.table)
+library(ggplot2)
+
+# do not enter
+ggplot() +
+  geom_polygon(aes(
+    x = cos(seq(0, 2 * pi, pi / 4) + pi / 8) * 1.082,
+    y = sin(seq(0, 2 * pi, pi / 4) + pi / 8) * 1.082
+  ), color = &quot;#90091E&quot;, fill = &quot;#90091E&quot;) +
+  geom_text(aes(x = 0, y = 0, label = &quot;DO NOT\nENTER&quot;), 
+            color = &quot;white&quot;, size = 3) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_void() +
+  coord_equal()
+ggsave(paste0(&quot;signs/do_not_enter_straight_south.png&quot;),
+  height = 1,
+  width = 1
+)</code></pre>
+</details>
+<p>You can see the rest of the code here.</p>
+<details>
+<summary>
+[second part of <code>create_signs</code> code]
+</summary>
+<pre class="r"><code>directions &lt;- data.table(
+  direction = c(
+    &quot;east&quot;,
+    &quot;north&quot;,
+    &quot;west&quot;,
+    &quot;south&quot;
+  ),
+  angle = c(270, 0, 90, 180)
+)
+
+circle &lt;- data.table(
+  x = cos(seq(0, 2 * pi, length.out = 360)),
+  y = sin(seq(0, 2 * pi, length.out = 360))
+)
+
+# square
+square &lt;- data.table(
+  x = c(-1, 1, 1, -1),
+  y = c(-1, -1, 1, 1)
+)
+
+# diamond
+diamond &lt;- data.table(
+  x = c(0, 1, 0, -1),
+  y = c(-1, 0, 1, 0)
+)
+
+for (i in 1:nrow(directions)) {
+  current_direction &lt;- directions[i, direction]
+  current_angle &lt;- directions[i, angle]
+
+  # light green dot
+  ggplot() +
+    geom_polygon(data = circle, aes(x = x * .5, y = y * .5), 
+                 color = &quot;#6FBD4B&quot;, fill = &quot;#6FBD4B&quot;) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/light_green_dot_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  # dark green dot
+  ggplot() +
+    geom_polygon(data = circle, aes(x = x * .75, y = y * .75), 
+                 color = &quot;#235C09&quot;, fill = &quot;#235C09&quot;) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/dark_green_dot_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  # yellow tape
+  if (current_direction %in% c(&quot;north&quot;, &quot;south&quot;)) {
+    ggplot() +
+      geom_rect(aes(
+        xmin = -.5, ymin = -.075,
+        xmax = .5, ymax = .075
+      ),
+      color = &quot;#EDE24C&quot;,
+      fill = &quot;#EDE24C&quot;
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/yellow_tape_straight_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  } else {
+    ggplot() +
+      geom_rect(aes(
+        xmin = -.075, ymin = -.5,
+        xmax = .075, ymax = .5
+      ),
+      color = &quot;#EDE24C&quot;,
+      fill = &quot;#EDE24C&quot;
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/yellow_tape_straight_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # wait here
+  ggplot() +
+    geom_polygon(data = square, aes(x = x, y = y), 
+                 color = &quot;#4D8235&quot;, fill = &quot;#4D8235&quot;) +
+    geom_text(aes(x = 0, y = 0, label = &quot;WAIT\nHERE&quot;),
+      color = &quot;white&quot;, size = 6,
+      angle = current_angle
+    ) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/wait_here_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  for (turn in c(&quot;right&quot;, &quot;left&quot;)) {
+    ggplot() +
+      geom_polygon(data = square, aes(x = x, y = y), 
+                   color = &quot;#4D8235&quot;, fill = &quot;#4D8235&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;WAIT\nHERE&quot;),
+        color = &quot;white&quot;, size = 6,
+        angle = current_angle
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/wait_here_&quot;, turn, &quot;_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # wash your hands
+  ggplot() +
+    geom_polygon(data = circle, aes(x = x, y = y), 
+                 color = &quot;#4D4D7A&quot;, fill = &quot;#4D4D7A&quot;) +
+    geom_text(aes(x = 0, y = 0, label = &quot;WASH YOUR\nHANDS&quot;),
+      color = &quot;white&quot;, size = 3,
+      angle = current_angle
+    ) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/wash_your_hands_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  for (turn in c(&quot;right&quot;, &quot;left&quot;)) {
+    ggplot() +
+      geom_polygon(data = circle, aes(x = x, y = y), 
+                   color = &quot;#4D4D7A&quot;, fill = &quot;#4D4D7A&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;WASH YOUR\nHANDS&quot;),
+        color = &quot;white&quot;, size = 3,
+        angle = current_angle
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/wash_your_hands_&quot;, turn, &quot;_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # wear a mask
+  ggplot() +
+    geom_polygon(data = circle, aes(x = x, y = y), 
+                 color = &quot;#538479&quot;, fill = &quot;#538479&quot;) +
+    geom_text(aes(x = 0, y = 0, label = &quot;WEAR A\nMASK&quot;),
+      color = &quot;white&quot;, size = 3,
+      angle = current_angle
+    ) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/wear_a_mask_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  for (turn in c(&quot;right&quot;, &quot;left&quot;)) {
+    ggplot() +
+      geom_polygon(data = circle, aes(x = x, y = y), 
+                   color = &quot;#538479&quot;, fill = &quot;#538479&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;WEAR A\nMASK&quot;),
+        color = &quot;white&quot;, size = 3,
+        angle = current_angle
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/wear_a_mask_&quot;, turn, &quot;_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # wait six feet
+  ggplot() +
+    geom_polygon(data = circle, aes(x = x, y = y), 
+                 color = &quot;#54707C&quot;, fill = &quot;#54707C&quot;) +
+    geom_text(aes(x = 0, y = 0, label = &quot;WAIT \nSIX FEET&quot;),
+      color = &quot;white&quot;, size = 3,
+      angle = current_angle
+    ) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/wait_six_feet_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  for (turn in c(&quot;right&quot;, &quot;left&quot;)) {
+    ggplot() +
+      geom_polygon(data = circle, aes(x = x, y = y), 
+                   color = &quot;#54707C&quot;, fill = &quot;#54707C&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;WAIT \nSIX FEET&quot;),
+        color = &quot;white&quot;, size = 3,
+        angle = current_angle
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/wait_six_feet_&quot;, turn, &quot;_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # 6 feet
+  if (current_direction %in% c(&quot;north&quot;, &quot;south&quot;)) {
+    ggplot() +
+      geom_polygon(data = diamond, aes(x = x, y = y), 
+                   color = &quot;#E1AD0F&quot;, fill = &quot;#E1AD0F&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;6 FEET&quot;),
+        color = &quot;black&quot;, size = 3,
+        angle = current_angle
+      ) +
+      geom_segment(aes(
+        x = 0,
+        y = c(.25, -.25),
+        xend = 0,
+        yend = c(.8, -.8)
+      ),
+      lineend = &quot;butt&quot;,
+      linejoin = &quot;mitre&quot;,
+      color = &quot;black&quot;,
+      arrow = arrow(length = unit(0.05, &quot;npc&quot;), 
+                    angle = 45, type = &quot;closed&quot;),
+      size = 2
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/six_feet_straight_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  } else {
+    ggplot() +
+      geom_polygon(data = diamond, aes(x = x, y = y), 
+                   color = &quot;#E1AD0F&quot;, fill = &quot;#E1AD0F&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;6 FEET&quot;),
+        color = &quot;black&quot;, size = 3,
+        angle = current_angle
+      ) +
+      geom_segment(aes(
+        x = c(.25, -.25),
+        y = 0,
+        xend = c(.8, -.8),
+        yend = 0
+      ),
+      lineend = &quot;butt&quot;,
+      linejoin = &quot;mitre&quot;,
+      color = &quot;black&quot;,
+      arrow = arrow(length = unit(0.05, &quot;npc&quot;), 
+                    angle = 45, type = &quot;closed&quot;),
+      size = 2
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/six_feet_straight_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+
+  # one way
+  ggplot() +
+    geom_polygon(data = square, aes(x = x, y = y), 
+                 color = &quot;#AB4343&quot;, fill = &quot;#AB4343&quot;) +
+    geom_text(aes(x = 0, y = 0, label = &quot;ONE\nWAY&quot;),
+      color = &quot;white&quot;, size = 6,
+      angle = current_angle
+    ) +
+    scale_x_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_void() +
+    coord_equal()
+  ggsave(paste0(&quot;signs/one_way_straight_&quot;, 
+                current_direction, &quot;.png&quot;),
+    height = 1,
+    width = 1
+  )
+
+  for (turn in c(&quot;right&quot;, &quot;left&quot;)) {
+    ggplot() +
+      geom_polygon(data = square, aes(x = x, y = y), 
+                   color = &quot;#AB4343&quot;, fill = &quot;#AB4343&quot;) +
+      geom_text(aes(x = 0, y = 0, label = &quot;ONE\nWAY&quot;),
+        color = &quot;white&quot;, size = 6,
+        angle = current_angle
+      ) +
+      scale_x_continuous(limits = c(-1, 1)) +
+      scale_y_continuous(limits = c(-1, 1)) +
+      theme_void() +
+      coord_equal()
+    ggsave(paste0(&quot;signs/one_way_&quot;, turn, &quot;_&quot;, 
+                  current_direction, &quot;.png&quot;),
+      height = 1,
+      width = 1
+    )
+  }
+}
+
+# arrow
+ggplot() +
+  geom_polygon(aes(
+    x = c(-.25, .25, .25, .5, 0, -.5, -.25),
+    y = c(-.9, -.9, .25, .25, .9, .25, .25)
+  ), color = &quot;#444444&quot;, fill = &quot;#444444&quot;) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_void() +
+  coord_equal()
+ggsave(paste0(&quot;signs/arrow_straight_north.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_right_north.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_left_north.png&quot;),
+  height = 1,
+  width = 1
+)
+
+ggplot() +
+  geom_polygon(aes(
+    x = c(-.25, .25, .25, .5, 0, -.5, -.25),
+    y = c(.9, .9, -.25, -.25, -.9, -.25, -.25)
+  ), color = &quot;#444444&quot;, fill = &quot;#444444&quot;) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_void() +
+  coord_equal()
+ggsave(paste0(&quot;signs/arrow_straight_south.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_right_south.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_left_south.png&quot;),
+  height = 1,
+  width = 1
+)
+
+ggplot() +
+  geom_polygon(aes(
+    x = c(-.9, -.9, .25, .25, .9, .25, .25),
+    y = c(-.25, .25, .25, .5, 0, -.5, -.25)
+  ), color = &quot;#444444&quot;, fill = &quot;#444444&quot;) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_void() +
+  coord_equal()
+ggsave(paste0(&quot;signs/arrow_straight_east.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_right_east.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_left_east.png&quot;),
+  height = 1,
+  width = 1
+)
+
+ggplot() +
+  geom_polygon(aes(
+    x = c(.9, .9, -.25, -.25, -.9, -.25, -.25),
+    y = c(-.25, .25, .25, .5, 0, -.5, -.25)
+  ),
+  color = &quot;#444444&quot;, fill = &quot;#444444&quot;
+  ) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_void() +
+  coord_equal()
+ggsave(paste0(&quot;signs/arrow_straight_west.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_right_west.png&quot;),
+  height = 1,
+  width = 1
+)
+ggsave(paste0(&quot;signs/arrow_left_west.png&quot;),
+  height = 1,
+  width = 1
+)</code></pre>
+</details>
+<p>We’ll need to determine how the path moves and which images display that to add the images. Using information from the previous and next steps, we can determine which direction the path moves and whether it turns or stays straight. This data can be paired with information from the image names to choose images that fit in the maze.</p>
+<p>For each node on the path, several images could work. So, we select one at random from a bag. A parameter determines the number of available images in the bag. A value of 0 has all possible images on each draw. A value of 1 only yields one image for each course (straight vs. turn).</p>
+<details open>
+<summary>
+[<code>get_image_data</code> function]
+</summary>
+<pre class="r"><code>get_image_data &lt;- function(path, structure_parameter) {
+
+  # Set up variables used to determine which images can be used
+  path &lt;- path[order(order), ]
+  path[, &quot;:=&quot;(previous_x = shift(x, type = &quot;lag&quot;),
+    previous_y = shift(y, type = &quot;lag&quot;),
+    next_x = shift(x, type = &quot;lead&quot;),
+    next_y = shift(y, type = &quot;lead&quot;))]
+
+  path[, &quot;:=&quot;(course = fifelse(
+    previous_x == next_x | previous_y == next_y, &quot;straight&quot;,
+    fifelse((y &gt; previous_y &amp; next_x &gt; x) |
+      (x &gt; previous_x &amp; next_y &lt; y) |
+      (y &lt; previous_y &amp; next_x &lt; x) |
+      (x &lt; previous_x &amp; next_y &gt; y), &quot;right&quot;, &quot;left&quot;)
+  ),
+  direction = fifelse(
+    x &lt; next_x, &quot;east&quot;,
+    fifelse(
+      y &lt; next_y, &quot;north&quot;,
+      fifelse(
+        x &gt; next_x, &quot;west&quot;,
+        &quot;south&quot;
+      )
+    )
+  ))]
+
+  # set up bag to hold the images
+  bag_pull &lt;- function(this_course, this_direction, bag) {
+    bag[course == this_course &amp; direction == this_direction, 
+        ][sample(.N, 1), file]
+  }
+
+  # fill bag
+  bag &lt;- data.table(file = list.files(&quot;signs&quot;, full.names = TRUE))
+  bag &lt;- bag[file != &quot;signs/do_not_enter_straight_south.png&quot;, ]
+
+  bag[, c(&quot;sign&quot;, &quot;direction&quot;) := 
+        tstrsplit(gsub(&quot;signs/|.png&quot;, &quot;&quot;, file), &quot;_(?!.*_)&quot;, perl = TRUE)]
+  bag[, c(&quot;sign&quot;, &quot;course&quot;) := tstrsplit(sign, &quot;_(?!.*_)&quot;, perl = TRUE)]
+  bag[, &quot;:=&quot;(sub_course = fifelse(course == &quot;straight&quot;, &quot;straight&quot;, &quot;turn&quot;))]
+
+  # filter down to a smaller amount if the structure_parameter is large
+  bag_subset &lt;- unique(bag[, c(&quot;sign&quot;, &quot;sub_course&quot;)])
+  bag_subset &lt;- unique(bag_subset[
+    , .SD[sample(.N, ceiling(
+      (1 - (structure_parameter)^(1 / 4)) * (.N - 1) + 1))]
+    , by = sub_course][, c(&quot;sign&quot;, &quot;sub_course&quot;)])
+  bag &lt;- merge(bag, bag_subset, by = c(&quot;sign&quot;, &quot;sub_course&quot;))
+
+  # add images from bag
+  path[, image := bag_pull(course, direction, bag), by = seq_len(nrow(path))]
+
+  # Start and end
+  path[y == 0 &amp; x == 6, image := &quot;signs/wait_here_straight_north.png&quot;]
+  path[y == 0 &amp; x == 5, image := &quot;signs/do_not_enter_straight_south.png&quot;]
+}</code></pre>
+</details>
+</div>
+<div id="finally-add-the-background-and-save." class="section level1">
+<h1>Finally, add the background and save.</h1>
+<p>After setting up the appropriate images, we only need to add a background. The background works by stacking small gray rectangles of various sizes with a low alpha value. This is supposed to resemble a grocery store floor.</p>
+<details open>
+<summary>
+[final code]
+</summary>
+<pre class="r"><code>library(data.table)
+library(ggplot2)
+library(ggimage)
+
+source(&quot;get_maze.R&quot;)
+source(&quot;update_maze.R&quot;)
+source(&quot;maze_to_path.R&quot;)
+source(&quot;get_image_data.R&quot;)
+
+set.seed(1)
+for (structure_parameter in seq(0, 1, by = .25)) {
+  for (num in 1:2) {
+    edges &lt;- get_maze(structure_parameter)
+    edges &lt;- update_maze(edges)
+    path &lt;- maze_to_path(edges)
+    path &lt;- get_image_data(path, structure_parameter)
+
+    # set up background floor
+    floor &lt;- CJ(
+      x = seq(.5, 10.5, length.out = 360),
+      y = seq(-.5, 10.5, length.out = 360)
+    )
+    floor[, color := sample(c(seq(5, 9), c(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;, &quot;F&quot;)), 1),
+      by = seq_len(nrow(floor))
+    ]
+    floor[, color := paste0(&quot;#&quot;, color, color, color, color, color, color)]
+    floor[, &quot;:=&quot;(xmin = x - runif(1, 0, .25),
+      ymin = y - runif(1, 0, .25),
+      xmax = x + runif(1, 0, .25),
+      ymax = y + runif(1, 0, .25)),
+    by = seq_len(nrow(floor))
+    ]
+
+    ggplot() +
+      geom_rect(
+        data = floor,
+        aes(
+          xmin = xmin, ymin = ymin,
+          xmax = xmax, ymax = ymax,
+          fill = color
+        ),
+        color = NA,
+        alpha = .01
+      ) +
+      scale_fill_identity() +
+      geom_image(
+        data = path,
+        aes(x, y, image = image)
+      ) +
+      theme_void() +
+      theme(aspect.ratio = 1)
+    ggsave(paste0(&quot;output/image_&quot;, structure_parameter * 100, 
+                  &quot;_&quot;, num, &quot;.jpeg&quot;),
+      width = 8,
+      height = 8,
+      bg = &quot;#F3F3F3&quot;
+    )
+  }
+}</code></pre>
+</details>
+<p>Now we can see the final outputs.</p>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_0_1.jpeg" alt="Structure Parameter = 0, Run 1" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = 0, Run 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_0_2.jpeg" alt="Structure Parameter = 0, Run 2" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = 0, Run 2
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_25_1.jpeg" alt="Structure Parameter = .25, Run 1" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .25, Run 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_25_2.jpeg" alt="Structure Parameter = .25, Run 2" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .25, Run 2
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_50_1.jpeg" alt="Structure Parameter = .5, Run 1" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .5, Run 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_50_2.jpeg" alt="Structure Parameter = .5, Run 2" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .5, Run 2
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_75_1.jpeg" alt="Structure Parameter = .75, Run 1" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .75, Run 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_75_2.jpeg" alt="Structure Parameter = .75, Run 2" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = .75, Run 2
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_100_1.jpeg" alt="Structure Parameter = 1, Run 1" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = 1, Run 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-03-pandemic-mazes/index.en-us_files/image_100_2.jpeg" alt="Structure Parameter = 1, Run 2" style="display:block; margin:auto;" />
+<p class="caption">
+Structure Parameter = 1, Run 2
+</p>
+</div>
+</div>
+</div>
+</div>
