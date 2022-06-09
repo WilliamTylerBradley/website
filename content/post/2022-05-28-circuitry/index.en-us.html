@@ -1,0 +1,530 @@
+---
+title: Circuitry
+author: Tyler
+date: '2022-05-28'
+slug: circuitry
+tags:
+  - R
+  - Generative Art
+summary: Generative art project based on a looped path
+thumbnailImage: /post/2022-05-28-circuitry/index.en-us_files/output_1.jpeg
+thumbnailImagePosition: left
+showTags: true  
+---
+
+
+
+<div id="background" class="section level1">
+<h1>Background</h1>
+<p>This small generative art project uses code from my previous work. I really liked the looped path objects and decided to try something else with them. This work expands the loop a little, adds a randomly generated color scheme, and uses a standard image style.</p>
+</div>
+<div id="code" class="section level1">
+<h1>Code</h1>
+<p>The first function is <code>get_maze</code>. This code creates a maze from a <code>size</code>-by-<code>size</code> grid. The final code uses a base <code>size</code> of ten. The maze starts at the bottom middle and randomly adds edges.</p>
+<details>
+<summary>
+[<code>get_maze</code> function]
+</summary>
+<pre class="r"><code>get_maze &lt;- function(size) {
+  
+  # Sets up base data set of potential edges for the maze
+  # size is always 5 for right now
+  edges &lt;- CJ(
+    x1 = rep(seq(1, size), 2),
+    y1 = seq(1, size)
+  )
+  edges[, &quot;:=&quot;(x2 = ifelse(.I %% 2 == 0, x1 + 1, x1),
+               y2 = ifelse(.I %% 2 == 1, y1 + 1, y1))]
+  edges &lt;- edges[x2 &lt;= size &amp; y2 &lt;= size, ]
+  edges[, id := seq(1, nrow(edges))]
+  edges[, &quot;:=&quot;(node1 = (x1 - 1) * size + (y1 - 1) + 1,
+               node2 = (x2 - 1) * size + (y2 - 1) + 1)]
+  setkey(edges, id)
+  
+  # data set of nodes
+  nodes &lt;- unique(rbind(edges[, .(id = node1)], edges[, .(id = node2)]))
+  nodes[, connected := 0]
+  setkey(nodes, id)
+  
+  # data set of node id to edge ids
+  nodes_edges &lt;- unique(rbind(edges[, .(id = node1, edge = id)][], 
+                              edges[, .(id = node2, edge = id)]))
+  setkey(nodes_edges, id)
+  
+  # location : 1 for maze, 0 for frontier, -1 for uncharted, -2 for discarded
+  # starting point : bottom middle
+  # include bottom middle then either off to the sides or up
+  starting_edge &lt;- edges[(x1 == 3 &amp; y1 == 1) |
+                           (x1 == 2 &amp; y1 == 1 &amp; x2 == 3 &amp; y2 == 1), ][sample(.N, 1), ]
+  
+  # Set up base columns
+  edges[, &quot;:=&quot;(location = -1,
+               probability = 0)]
+  edges[.(starting_edge$id), &quot;:=&quot;(location = 1,
+                                  probability = 0)]
+  nodes[.(c(starting_edge$node1, starting_edge$node2)), connected := 1]
+  edges[.(nodes_edges[.(c(starting_edge$node1, starting_edge$node2)), &quot;edge&quot;]), &quot;:=&quot;
+        (location = fifelse(location == -1, 0, location),
+          probability = fifelse(location == -1, 1, probability))]
+  
+  #### Loop through maze generation ----
+  num_edges &lt;- 1
+  while (num_edges &lt; (size^2 - 1)) {
+    
+    # select next edge
+    selected_edge &lt;- edges[sample(.N, 1, prob = probability), ]
+    
+    ## if it&#39;s good, then
+    # add it to the maze
+    # add connecting edges to the frontier
+    # else add it to discard
+    if (any(nodes[.(c(selected_edge$node1, selected_edge$node2))
+                  , connected] == 0)) {
+      
+      # add to maze
+      edges[.(selected_edge$id), &quot;:=&quot;(location = 1,
+                                      probability = 0)]
+      
+      # update nodes
+      nodes[.(c(selected_edge$node1, selected_edge$node2)), connected := 1]
+      
+      # update frontier
+      edges[.(nodes_edges[.(c(selected_edge$node1, selected_edge$node2))
+                          , &quot;edge&quot;]), &quot;:=&quot;
+            (location = fifelse(location == -1, 0, location),
+              probability = fifelse(location == -1, 1, probability))]
+      
+      num_edges &lt;- num_edges + 1
+    } else {
+      # drop from frontier
+      edges[.(selected_edge$id), &quot;:=&quot;(location = -2,
+                                      probability = 0)]
+    }
+  }
+  
+  return(edges[location == 1, ])
+}</code></pre>
+</details>
+<p><br></p>
+<p>The next function, <code>update_maze</code>, doubles the edges so that the maze follows a loop. The new connections trace the outline of the maze. This action mimics exploring the maze and following the path back to the start.</p>
+<details>
+<summary>
+[<code>update_maze</code> function]
+</summary>
+<pre class="r"><code>update_maze &lt;- function(edges) {
+  
+  # list out all possible edges
+  # (basically same code as setting up the maze)
+  # plus adds edges that stick out on the outside
+  size &lt;- max(edges$x1) + 1
+  all_possible_edges &lt;- CJ(
+    x1 = rep(seq(1, size), 2) - 1,
+    y1 = seq(1, size) - 1
+  )
+  all_possible_edges[, &quot;:=&quot;(x2 = ifelse(.I %% 2 == 0, x1 + 1, x1),
+                            y2 = ifelse(.I %% 2 == 1, y1 + 1, y1))]
+  all_possible_edges &lt;- all_possible_edges[(x1 != 0 | x2 != 0) &amp;
+                                             (y1 != 0 | y2 != 0), ]
+  
+  edges &lt;- edges[, .(x1, x2, y1, y2, id)]
+  
+  # merge maze and all possible edges to see which ones weren&#39;t used
+  all_possible_edges &lt;- merge(all_possible_edges, edges,
+                              by = c(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;),
+                              all.x = TRUE
+  )
+  
+  # This function subs in the new edges appropriately
+  # basically, any path edge needs to be updated to two edges so the maze
+  # starts at the bottom middle, travels through the maze, and back to the start
+  create_new_edges &lt;- function(x1, y1, x2, y2, id) {
+    # if no edges, add block
+    if (is.na(id)) {
+      if (y1 == y2) { # horizontal edge
+        list(
+          x1_1 = 2 * x1,
+          y1_1 = 2 * y1 - 1,
+          x2_1 = 2 * x1,
+          y2_1 = 2 * y1,
+          x1_2 = 2 * x2 - 1,
+          y1_2 = 2 * y2 - 1,
+          x2_2 = 2 * x2 - 1,
+          y2_2 = 2 * y2
+        )
+      } else { # vertical edge
+        list(
+          x1_1 = 2 * x1 - 1,
+          y1_1 = 2 * y1,
+          x2_1 = 2 * x1,
+          y2_1 = 2 * y1,
+          x1_2 = 2 * x2 - 1,
+          y1_2 = 2 * y2 - 1,
+          x2_2 = 2 * x2,
+          y2_2 = 2 * y2 - 1
+        )
+      }
+    } else { # has edge, add connections
+      if (y1 == y2) { # horizontal edge
+        list(
+          x1_1 = 2 * x1,
+          y1_1 = 2 * y1 - 1,
+          x2_1 = 2 * x2 - 1,
+          y2_1 = 2 * y2 - 1,
+          x1_2 = 2 * x1,
+          y1_2 = 2 * y1,
+          x2_2 = 2 * x2 - 1,
+          y2_2 = 2 * y2
+        )
+      } else { # vertical edge
+        list(
+          x1_1 = 2 * x1 - 1,
+          y1_1 = 2 * y1,
+          x2_1 = 2 * x2 - 1,
+          y2_1 = 2 * y2 - 1,
+          x1_2 = 2 * x1,
+          y1_2 = 2 * y1,
+          x2_2 = 2 * x2,
+          y2_2 = 2 * y2 - 1
+        )
+      }
+    }
+  }
+  
+  # fill in blocks and paths
+  all_possible_edges[, c(
+    &quot;x1_1&quot;, &quot;y1_1&quot;, &quot;x2_1&quot;, &quot;y2_1&quot;,
+    &quot;x1_2&quot;, &quot;y1_2&quot;, &quot;x2_2&quot;, &quot;y2_2&quot;
+  ) := create_new_edges(x1, y1, x2, y2, id),
+  by = seq_len(nrow(all_possible_edges))
+  ]
+  
+  # clean everything up
+  all_possible_edges[, &quot;:=&quot;(x1 = NULL,
+                            y1 = NULL,
+                            x2 = NULL,
+                            y2 = NULL,
+                            id = NULL)]
+  
+  all_possible_edges &lt;- melt(all_possible_edges,
+                             measure.vars = patterns(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;),
+                             value.name = c(&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;)
+  )[, variable := NULL]
+  
+  all_possible_edges &lt;- all_possible_edges[(x1 &gt; 0 &amp;
+                                              y1 &gt; 0 &amp;
+                                              x2 &lt; (2 * size - 1) &amp;
+                                              y2 &lt; (2 * size - 1)), ]
+}</code></pre>
+</details>
+<p><br></p>
+<p>The last external function, <code>maze_to_path</code>, puts all the edges in order from the bottom left corner, traveling through the loop and back to the beginning.</p>
+<details>
+<summary>
+[<code>maze_to_path</code> function]
+</summary>
+<pre class="r"><code>maze_to_path &lt;- function(edges) {
+  # set up id
+  edges[, id := .I]
+  setkey(edges, id)
+  
+  # set up nodes data set
+  nodes &lt;- unique(rbind(edges[, .(x = x1, y = y1)]
+                        , edges[, .(x = x2, y = y2)]))
+  nodes[, id := .I]
+  setkey(nodes, id)
+  
+  # add node ids to edges data set
+  edges &lt;- merge(edges, nodes,
+                 by.x = c(&quot;x1&quot;, &quot;y1&quot;), by.y = c(&quot;x&quot;, &quot;y&quot;),
+                 suffixes = c(&quot;&quot;, &quot;_node_1&quot;), all.x = TRUE
+  )
+  edges &lt;- merge(edges, nodes,
+                 by.x = c(&quot;x2&quot;, &quot;y2&quot;), by.y = c(&quot;x&quot;, &quot;y&quot;),
+                 suffixes = c(&quot;&quot;, &quot;_node_2&quot;), all.x = TRUE
+  )
+  
+  # nodes to edges look up table
+  nodes_edges &lt;- unique(rbind(
+    edges[, .(id = id_node_1, edge = id, connecting_node = id_node_2)],
+    edges[, .(id = id_node_2, edge = id, connecting_node = id_node_1)]
+  ))
+  setkey(nodes_edges, id)
+  
+  # save spot for path
+  path &lt;- vector(mode = &quot;numeric&quot;)
+  
+  # variables to keep track of progress through the maze
+  current_node &lt;- nodes[y == 1 &amp; x == 1, id]
+  first_node &lt;- current_node
+  
+  # update path
+  path &lt;- append(path, current_node)
+  previous_node &lt;- current_node
+  
+  # keep going to unexplored nodes
+  current_node &lt;- nodes_edges[.(current_node), 
+  ][connecting_node != previous_node
+    , connecting_node][1]
+  
+  # continue through the whole path
+  while (current_node != first_node) {
+    path &lt;- append(path, current_node)
+    future_node &lt;- nodes_edges[.(current_node), 
+    ][connecting_node != previous_node
+      , connecting_node]
+    previous_node &lt;- current_node
+    current_node &lt;- future_node
+  }
+  
+  path &lt;- data.table(
+    order = seq(1, length(path)),
+    node = path
+  )
+  path &lt;- merge(path, nodes, by.x = c(&quot;node&quot;), by.y = c(&quot;id&quot;))
+}</code></pre>
+</details>
+<p><br></p>
+<p>The main workhorse utilizes the previous functions to get a set of connections.</p>
+<p>The color scheme code follows a random circle in the HCL color space. There are ten points equidistant around the circle. Sometimes the first random circle will produce invalid color values. So the code loops until it finds a complete set. The circle’s center is saved and used as a border for the images and fills small circles where the connections meet.</p>
+<p>Finally, a sine wave with a random number of waves determines the connections’ sizes.</p>
+<details open>
+<summary>
+[<code>generate_output</code> code]
+</summary>
+<pre class="r"><code>library(data.table)
+library(ggplot2)
+
+source(&quot;get_maze.R&quot;)
+source(&quot;update_maze.R&quot;)
+source(&quot;maze_to_path.R&quot;)
+
+get_set &lt;- function(size) {
+  set &lt;- get_maze(size)
+  set &lt;- update_maze(set)
+  set &lt;- maze_to_path(set)
+  
+  set[, &quot;:=&quot;(x = x - (size + .5),
+             y = y - (size + .5))]
+  
+  set &lt;- set[order(order), ]
+  set[, &#39;:=&#39; (xend = shift(x, type = &quot;lead&quot;, fill = 1 - (size + .5) ),
+              yend = shift(y, type = &quot;lead&quot;, fill = 1 - (size + .5) ))]
+}
+
+# Get color scheme by finding a random circle in HCL color space
+get_colors &lt;- function() {
+  
+  # two random vectors
+  v1 &lt;- runif(3, -1, 1)
+  v2 &lt;- runif(3, -1, 1)
+  # orthogonal
+  v2 &lt;- v2 - c(v1 %*% v2 / v1 %*% v1 ) * v1
+  # unit
+  v1 &lt;- v1 / sqrt(c(v1 %*% v1))
+  v2 &lt;- v2 / sqrt(c(v2 %*% v2))
+  
+  # random point
+  p &lt;- runif(3, -30, 30) + c(0, 0, 50)
+  
+  # random radius
+  r &lt;- runif(1, 10, 30)
+  
+  # ten points around the circle
+  # need to keep both end points even though they&#39;re the same value
+  # for scale_color_gradientn to loop back around
+  t &lt;- seq(0, 2 * pi, length.out = 11)
+  
+  colors &lt;- data.table(p1 = p[1],
+                       p2 = p[2],
+                       p3 = p[3],
+                       r = r,
+                       t = t,
+                       v11 = v1[1],
+                       v12 = v1[2],
+                       v13 = v1[3],
+                       v21 = v2[1],
+                       v22 = v2[2],
+                       v23 = v2[3])
+  
+  colors[, &#39;:=&#39; (x = p1 + r * cos(t) * v11 + r * sin(t) * v21,
+                 y = p2 + r * cos(t) * v12 + r * sin(t) * v22,
+                 z = p3 + r * cos(t) * v13 + r * sin(t) * v23)]
+  colors[, &quot;:=&quot; (H = (atan2(y, x) * 180/pi) %% 360,
+                 C = sqrt(x^2 + y^2),
+                 L = z)]
+  
+  
+  colors[, &#39;:=&#39; (hex_value = ifelse(L &lt; 0 | L &gt; 100, NA_character_, 
+                                    hcl(H, C, L, fixup = FALSE))), 
+         by = seq_len(nrow(colors))]
+
+  return(colors)
+}
+
+# Sometimes the circle will be out of range,
+# so try again until all the colors are valid
+get_color_scheme &lt;- function() {
+  colors &lt;- get_colors()
+
+  while(any(is.na(colors$hex_value))) {
+    colors &lt;- get_colors()
+  }
+  
+  return(colors)
+}
+
+# Create 10 outputs
+set.seed(10101010)
+for(i in 1:10) {
+  size &lt;- 10
+  set &lt;- get_set(size)
+  
+  colors &lt;- get_color_scheme()
+  
+  # Save center of the circle
+  color_center &lt;- hcl(h = (atan2(colors$p2[1], colors$p1[1]) * 180/pi) %% 360,
+                      c = sqrt(colors$p1[1]^2 + colors$p2[1]^2),
+                      l = colors$p3[1])
+  
+  color_scheme &lt;- colors[[&quot;hex_value&quot;]]
+  
+  # Get boundaries of white background square
+  boundaries &lt;- data.table(x = c(min(set$x), max(set$x), max(set$x), min(set$x)),
+                           y = c(min(set$y), min(set$y), max(set$y), max(set$y)))
+  boundaries[, &#39;:=&#39; (x = x * 1.1,
+                     y = y * 1.1)]
+  
+  # Set up connections size
+  # order goes from 1 to 400
+  # 400 / waves = num segments per wave
+  waves &lt;- round(runif(1, 70, 130))
+  offset &lt;- runif(1, 0, 2*pi)
+  set[, size := order / max(order) * 2*pi]
+  set[, size := (sin(waves * size + offset) + 1) * 2.5 ]
+  
+  ggplot() +
+    geom_polygon(data = boundaries,
+                 aes(x, y),
+                 color = &quot;white&quot;,
+                 fill = &quot;white&quot;) +
+    geom_segment(data = set,
+                 aes(x, y,
+                     xend = xend, yend = yend, 
+                     color = order, size = size),
+                 alpha = .5,
+                 lineend = &quot;round&quot;) +
+    geom_segment(data = set,
+                 aes(x, y,
+                     xend = xend, yend = yend, 
+                     color = order, size = size / 5),
+                 alpha = 1,
+                 lineend = &quot;round&quot;) +
+    geom_point(data = set,
+               aes(x, y), 
+               color = color_center,
+               size = .5) +
+    scale_color_gradientn(colours = color_scheme) +
+    theme_void() +
+    theme(legend.position = &quot;none&quot;) +
+    coord_equal()
+  ggsave(paste0(&quot;output/output_&quot;, i, &quot;.jpeg&quot;), height = 5, width = 5, bg = color_center)
+}</code></pre>
+</details>
+</div>
+<div id="output" class="section level1">
+<h1>Output</h1>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_1.jpeg" alt="Output 1" style="display:block; margin:auto;" />
+<p class="caption">
+Output 1
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_2.jpeg" alt="Output 2" style="display:block; margin:auto;" />
+<p class="caption">
+Output 2
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_3.jpeg" alt="Output 3" style="display:block; margin:auto;" />
+<p class="caption">
+Output 3
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_4.jpeg" alt="Output 4" style="display:block; margin:auto;" />
+<p class="caption">
+Output 4
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_5.jpeg" alt="Output 5" style="display:block; margin:auto;" />
+<p class="caption">
+Output 5
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_6.jpeg" alt="Output 6" style="display:block; margin:auto;" />
+<p class="caption">
+Output 6
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_7.jpeg" alt="Output 7" style="display:block; margin:auto;" />
+<p class="caption">
+Output 7
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_8.jpeg" alt="Output 8" style="display:block; margin:auto;" />
+<p class="caption">
+Output 8
+</p>
+</div>
+</div>
+</div>
+<p><br></p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; grid-column-gap: 10px;">
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_9.jpeg" alt="Output 9" style="display:block; margin:auto;" />
+<p class="caption">
+Output 9
+</p>
+</div>
+</div>
+<div>
+<div class="figure">
+<img src="/post/2022-05-28-circuitry/index.en-us_files/output_10.jpeg" alt="Output 10" style="display:block; margin:auto;" />
+<p class="caption">
+Output 10
+</p>
+</div>
+</div>
+</div>
+</div>
